@@ -1,0 +1,162 @@
+import { InvoiceEmail, AccountingIntegration, MailboxIntegration, SalonProfile } from "./types";
+
+export const mockSalonProfile: SalonProfile = {
+  name: "Haarstudio & Spa Puur",
+  owner: "Emma van Leeuwen",
+  email: "emma@haarstudiopuur.nl",
+  plan: "KamiFlow Zen Solo",
+  accountingSoftware: "Moneybird",
+};
+
+export const mockMailboxes: MailboxIntegration[] = [
+  {
+    id: "mb-1",
+    provider: "gmail",
+    email: "inkoop@haarstudiopuur.nl",
+    status: "connected",
+    lastSync: "2 minuten geleden",
+    emailsProcessedToday: 14,
+  },
+  {
+    id: "mb-2",
+    provider: "outlook",
+    email: "administratie@haarstudiopuur.nl",
+    status: "connected",
+    lastSync: "8 minuten geleden",
+    emailsProcessedToday: 9,
+  },
+];
+
+export const mockAccountingIntegrations: AccountingIntegration[] = [
+  {
+    id: "moneybird",
+    name: "Moneybird",
+    description: "Koppel direct met jouw inkoopfacturen inbox in Moneybird.",
+    status: "connected",
+    accountName: "Haarstudio Puur B.V.",
+    lastSync: "Vandaag, 14:28",
+    logo: "moneybird",
+  },
+  {
+    id: "exact",
+    name: "Exact Online",
+    description: "Automatische doorvoer naar Exact Online Boekhouden.",
+    status: "disconnected",
+    logo: "exact",
+  },
+  {
+    id: "eboekhouden",
+    name: "e-Boekhouden.nl",
+    description: "Populaire boekhoudoplossing voor kappers en zzp-ers.",
+    status: "disconnected",
+    logo: "eboekhouden",
+  },
+  {
+    id: "yuki",
+    name: "Yuki",
+    description: "Slimme documentherkenning en verwerking via Yuki.",
+    status: "disconnected",
+    logo: "yuki",
+  },
+];
+
+export const mockInvoices: InvoiceEmail[] = [
+  {
+    id: "inv-1",
+    sender: "Davines Nederland B.V.",
+    senderEmail: "facturatie@davines.nl",
+    subject: "Factuur 2026-8812 - Uw bestelling Oi Shampoo & Conditioner",
+    snippet: "Beste Emma, hierbij ontvang je de factuur behorende bij bestelling #9812. Totaalbedrag € 348,50.",
+    receivedAt: "2026-11-08T09:14:00Z",
+    amount: 348.5,
+    invoiceNumber: "DAV-2026-8812",
+    status: "forwarded",
+    accountingTarget: "Moneybird (Inkoop)",
+    attachmentName: "Factuur_DAV-2026-8812.pdf",
+    confidenceScore: 98,
+    category: "Haarproducten",
+  },
+  {
+    id: "inv-2",
+    sender: "Keune Haircosmetics",
+    senderEmail: "orders@keune.com",
+    subject: "Verzendbevestiging & Factuur #99301 Tinta Color",
+    snippet: "Hartelijk dank voor je bestelling van Tinta Color tinten 6.1 en 7.3. Factuur bijgevoegd.",
+    receivedAt: "2026-11-07T16:45:00Z",
+    amount: 512.8,
+    invoiceNumber: "K-99301",
+    status: "forwarded",
+    accountingTarget: "Moneybird (Inkoop)",
+    attachmentName: "Keune_Factuur_99301.pdf",
+    confidenceScore: 95,
+    category: "Haarproducten",
+  },
+  {
+    id: "inv-3",
+    sender: "Nespresso Professional",
+    senderEmail: "klantenservice@nespresso-pro.nl",
+    subject: "Maandelijkse levering koffiebonen & melkcups - Salon Puur",
+    snippet: "Beste klant, bedankt voor uw bestelling. Zie bijlage voor het betaaloverzicht.",
+    receivedAt: "2026-11-07T11:20:00Z",
+    amount: 86.4,
+    invoiceNumber: "NES-44021",
+    status: "missed", // GEMIST: Bijvoorbeeld omdat subject 'betaaloverzicht' noemt ipv 'Factuur'
+    accountingTarget: "Niet doorgestuurd",
+    attachmentName: "Overzicht_levering_112026.pdf",
+    confidenceScore: 62,
+    category: "Koffie & Hospitality",
+  },
+  {
+    id: "inv-4",
+    sender: "Salon Ambience Benelux",
+    senderEmail: "info@salonambience.eu",
+    subject: "Factuur levering ergonomische kappersstoel model Roma",
+    snippet: "Hierbij de officiële factuur voor de geleverde kappersstoel ter vervanging.",
+    receivedAt: "2026-11-05T14:10:00Z",
+    amount: 1149.0,
+    invoiceNumber: "SA-2026-0341",
+    status: "forwarded",
+    accountingTarget: "Moneybird (Inkoop)",
+    attachmentName: "SA_Invoice_0341.pdf",
+    confidenceScore: 99,
+    category: "Salon Inrichting",
+  },
+  {
+    id: "inv-5",
+    sender: "Zettle by PayPal",
+    senderEmail: "transacties@zettle.com",
+    subject: "Maandoverzicht pin-transactiekosten oktober 2026",
+    snippet: "Uw maandelijks overzicht van transactiekosten staat klaar. Totaal ingehouden: € 74,20.",
+    receivedAt: "2026-11-02T08:00:00Z",
+    amount: 74.2,
+    invoiceNumber: "ZET-2026-10",
+    status: "missed", // GEMIST: Maandoverzicht / transactie afschrift
+    accountingTarget: "Niet doorgestuurd",
+    attachmentName: "Zettle_Kosten_10_2026.pdf",
+    confidenceScore: 58,
+    category: "Software & Pin",
+  },
+  {
+    id: "inv-6",
+    sender: "L'Oréal Professionnel",
+    senderEmail: "finance.nl@loreal.com",
+    subject: "Factuur Metal Detox salon set & Serie Expert",
+    snippet: "Geachte relatie, uw factuur voor order 449102 is beschikbaar als bijlage.",
+    receivedAt: "2026-10-30T10:15:00Z",
+    amount: 420.0,
+    invoiceNumber: "LOR-2026-7788",
+    status: "forwarded",
+    accountingTarget: "Moneybird (Inkoop)",
+    attachmentName: "Loreal_Factuur_7788.pdf",
+    confidenceScore: 97,
+    category: "Haarproducten",
+  },
+];
+
+export const mockDashboardStats = {
+  forwardedThisMonth: 28,
+  hoursSaved: 6.5,
+  connectedMailboxes: 2,
+  needsReviewCount: 2, // 2 missed items
+  totalAmountForwarded: 3840.9,
+};

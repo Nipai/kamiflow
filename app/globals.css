@@ -1,0 +1,31 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --primary: 92 109 96; /* #5c6d60 */
+    --background: 250 249 246; /* #faf9f6 soft warm zen white */
+    --card: 255 255 255;
+    --text-main: 45 49 46;
+    --text-muted: 115 125 118;
+  }
+
+  body {
+    background-color: #faf9f6;
+    color: #2b302c;
+    font-feature-settings: "rlig" 1, "calt" 1;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+}
+
+/* Subtle zen animation and beauty accents */
+@keyframes pulse-subtle {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.6; }
+}
+
+.animate-pulse-subtle {
+  animation: pulse-subtle 3s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
