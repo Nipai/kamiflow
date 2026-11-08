@@ -39,8 +39,9 @@ Factuur-e-mails worden automatisch herkend en direct doorgestuurd naar boekhoudp
 
 - [x] **Hosting & Deployment op Coolify / Docker (Poort 3002)**
   - Multi-stage `Dockerfile` geoptimaliseerd met Next.js `standalone` modus voor minimale resource-footprint en snelle opstart.
-  - `docker-compose.yml` geconfigureerd en direct gekoppeld aan het `coolify` netwerk.
-  - Container `kamiflow` live en actief op poort **3002** (getest via HTTP 200 OK op LAN `192.168.86.218:3002` en Tailscale `100.127.11.22:3002`).
+  - `docker-compose.yml` geconfigureerd en direct gekoppeld aan het `coolify` netwerk met Coolify application UUID.
+  - Geregistreerd in het Coolify Dashboard onder Project **KamiFlow** (Environment: `production`, Application: `kamiflow`).
+  - Container live en actief op poort **3002** (getest via HTTP 200 OK op LAN `192.168.86.218:3002` en Tailscale `100.127.11.22:3002`).
 
 - [x] **Kwaliteitsborging & Tests**
   - Vitest & React Testing Library test suite (20 tests, 5 test suites — 100% geslaagd).
