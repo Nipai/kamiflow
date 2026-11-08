@@ -3,7 +3,7 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-    container_name: kamiflow
+    container_name: mvdu08j2m4ymps8rhvewebbz
     restart: unless-stopped
     ports:
       - "3002:3000"
@@ -12,6 +12,10 @@ services:
       - PORT=3000
     networks:
       - coolify
+    labels:
+      - coolify.managed=true
+      - coolify.name=kamiflow
+      - coolify.applicationId=3
 
 networks:
   coolify:
