@@ -62,10 +62,10 @@ export default function DashboardLayout({
               <Sparkles className="w-5 h-5 text-kami-100" />
             </div>
             <div>
-              <span className="font-semibold text-lg text-stone-900 tracking-tight">
-                Kami<span className="text-kami-600">Flow</span>
+              <span className="font-serif text-xl font-medium text-stone-900 tracking-tight">
+                Kami<span className="text-kami-600 font-normal italic">Flow</span>
               </span>
-              <p className="text-[10px] text-stone-400 uppercase tracking-wider font-medium">
+              <p className="text-[10px] text-stone-400 uppercase tracking-widest font-medium">
                 Zen Dashboard
               </p>
             </div>
@@ -139,7 +139,9 @@ export default function DashboardLayout({
           <div className="w-8 h-8 rounded-xl bg-kami-600 flex items-center justify-center text-white">
             <Sparkles className="w-4 h-4 text-kami-100" />
           </div>
-          <span className="font-semibold text-stone-900">KamiFlow</span>
+          <span className="font-serif text-lg font-medium text-stone-900">
+            Kami<span className="text-kami-600 font-normal italic">Flow</span>
+          </span>
         </Link>
         <button
           onClick={() => setMobileMenuOpen(!mobileMenuOpen)}

@@ -57,7 +57,7 @@ export default function SettingsPage() {
     <div className="space-y-8 max-w-5xl">
       {/* HEADER */}
       <div>
-        <h1 className="text-2xl sm:text-3xl font-light text-stone-900 tracking-tight">
+        <h1 className="font-serif text-2xl sm:text-3xl font-light text-stone-900 tracking-tight">
           Instellingen &amp; Koppelingen
         </h1>
         <p className="text-sm text-stone-500 mt-1">

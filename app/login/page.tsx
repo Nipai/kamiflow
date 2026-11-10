@@ -46,11 +46,11 @@ export default function LoginPage() {
           <div className="w-11 h-11 rounded-2xl bg-kami-600 flex items-center justify-center text-white shadow-soft group-hover:bg-kami-700 transition">
             <Sparkles className="w-5 h-5 text-kami-100" />
           </div>
-          <span className="font-semibold text-2xl text-stone-900 tracking-tight">
-            Kami<span className="text-kami-600">Flow</span>
+          <span className="font-serif text-2xl font-medium text-stone-900 tracking-tight">
+            Kami<span className="text-kami-600 font-normal italic">Flow</span>
           </span>
         </Link>
-        <h2 className="mt-6 text-2xl font-light text-stone-900 tracking-tight sm:text-3xl">
+        <h2 className="font-serif mt-6 text-2xl font-light text-stone-900 tracking-tight sm:text-3xl">
           Welkom terug in de rust
         </h2>
         <p className="mt-2 text-sm text-stone-500">

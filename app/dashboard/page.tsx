@@ -89,7 +89,7 @@ export default function DashboardPage() {
       {/* HEADER SECTION */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-2xl sm:text-3xl font-light text-stone-900 tracking-tight">
+          <h1 className="font-serif text-2xl sm:text-3xl font-light text-stone-900 tracking-tight">
             Overzicht &amp; Factuur Inbox
           </h1>
           <p className="text-sm text-stone-500 mt-1">

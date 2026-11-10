@@ -11,8 +11,8 @@ export const PublicFooter = () => {
               <div className="w-8 h-8 rounded-xl bg-kami-600 flex items-center justify-center text-white">
                 <Sparkles className="w-4 h-4 text-kami-100" />
               </div>
-              <span className="font-semibold text-lg text-stone-900 tracking-tight">
-                Kami<span className="text-kami-600">Flow</span>
+              <span className="font-serif text-xl font-medium text-stone-900 tracking-tight">
+                Kami<span className="text-kami-600 font-normal italic">Flow</span>
               </span>
             </div>
             <p className="text-stone-500 max-w-sm leading-relaxed">

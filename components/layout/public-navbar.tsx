@@ -12,10 +12,10 @@ export const PublicNavbar = () => {
             <Sparkles className="w-5 h-5 text-kami-100" />
           </div>
           <div className="flex flex-col">
-            <span className="font-semibold text-lg text-stone-900 tracking-tight">
-              Kami<span className="text-kami-600">Flow</span>
+            <span className="font-serif text-xl font-medium text-stone-900 tracking-tight">
+              Kami<span className="text-kami-600 font-normal italic">Flow</span>
             </span>
-            <span className="text-[10px] text-stone-500 font-medium tracking-wide uppercase">
+            <span className="text-[10px] text-stone-500 font-medium tracking-widest uppercase">
               Voor de Beautysector
             </span>
           </div>

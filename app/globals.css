@@ -7,25 +7,59 @@
     --primary: 92 109 96; /* #5c6d60 */
     --background: 250 249 246; /* #faf9f6 soft warm zen white */
     --card: 255 255 255;
-    --text-main: 45 49 46;
+    --text-main: 43 48 44;
     --text-muted: 115 125 118;
   }
 
   body {
     background-color: #faf9f6;
     color: #2b302c;
-    font-feature-settings: "rlig" 1, "calt" 1;
+    font-feature-settings: "cv02", "cv03", "cv04", "cv11";
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
   }
+
+  h1, h2, h3, h4, .font-serif {
+    letter-spacing: -0.015em;
+  }
+}
+
+/* Zen & Wabi-Sabi paper textures */
+.bg-washi {
+  background-color: #faf9f6;
+  background-image: 
+    radial-gradient(at 15% 15%, rgba(92, 109, 96, 0.035) 0px, transparent 45%),
+    radial-gradient(at 85% 85%, rgba(194, 160, 101, 0.035) 0px, transparent 50%),
+    radial-gradient(at 50% 50%, rgba(244, 242, 236, 0.5) 0px, transparent 100%);
+}
+
+.bg-paper-grid {
+  background-color: #faf9f6;
+  background-image: radial-gradient(rgba(92, 109, 96, 0.06) 1px, transparent 1px);
+  background-size: 28px 28px;
 }
 
 /* Subtle zen animation and beauty accents */
 @keyframes pulse-subtle {
   0%, 100% { opacity: 1; }
-  50% { opacity: 0.6; }
+  50% { opacity: 0.65; }
 }
 
 .animate-pulse-subtle {
-  animation: pulse-subtle 3s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+  animation: pulse-subtle 4s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+/* Subtle float animation for zen balance */
+@keyframes float-zen {
+  0%, 100% { transform: translateY(0px); }
+  50% { transform: translateY(-4px); }
+}
+
+.animate-float-zen {
+  animation: float-zen 6s ease-in-out infinite;
+}
+
+/* Delicaat goud/messing accentrandje */
+.border-brass-delicate {
+  border-color: rgba(194, 160, 101, 0.3);
 }

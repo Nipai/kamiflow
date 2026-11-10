@@ -18,7 +18,7 @@ import { Badge } from "@/components/ui/badge";
 
 export default function HomePage() {
   return (
-    <div className="min-h-screen flex flex-col bg-[#faf9f6]">
+    <div className="min-h-screen flex flex-col bg-[#faf9f6] bg-washi">
       <PublicNavbar />
 
       <main className="flex-1">
@@ -31,9 +31,9 @@ export default function HomePage() {
                 <span>Set &amp; Forget factuurverwerking voor de beautybranche</span>
               </div>
 
-              <h1 className="text-4xl sm:text-5xl lg:text-6xl font-light text-stone-900 tracking-tight leading-[1.15]">
+              <h1 className="font-serif text-4xl sm:text-5xl lg:text-6xl font-light text-stone-900 tracking-tight leading-[1.18]">
                 Rust in je salon. <br />
-                <span className="font-semibold text-kami-600">
+                <span className="font-normal italic text-kami-600">
                   Nooit meer handmatig facturen doorsturen.
                 </span>
               </h1>
@@ -163,9 +163,9 @@ export default function HomePage() {
               <h2 className="text-xs uppercase font-semibold tracking-widest text-kami-600 mb-2">
                 Waarom KamiFlow
               </h2>
-              <p className="text-3xl font-light text-stone-900 tracking-tight sm:text-4xl">
+              <p className="font-serif text-3xl font-light text-stone-900 tracking-tight sm:text-4xl">
                 Jouw focus hoort bij je klanten, <br />
-                <span className="font-semibold text-stone-900">niet bij administratieve zoektochten.</span>
+                <span className="font-normal italic text-stone-900">niet bij administratieve zoektochten.</span>
               </p>
             </div>
 
@@ -222,7 +222,7 @@ export default function HomePage() {
               <h2 className="text-xs uppercase font-semibold tracking-widest text-kami-600 mb-2">
                 Hoe het werkt
               </h2>
-              <p className="text-3xl font-light text-stone-900 tracking-tight sm:text-4xl">
+              <p className="font-serif text-3xl font-light text-stone-900 tracking-tight sm:text-4xl">
                 In 3 stappen naar complete ontzorging
               </p>
             </div>
@@ -274,7 +274,7 @@ export default function HomePage() {
               <span className="text-xs uppercase font-semibold tracking-wider text-kami-600">
                 Ervaringen uit de praktijk
               </span>
-              <h2 className="text-3xl font-light text-stone-900 mt-2">
+              <h2 className="font-serif text-3xl font-light text-stone-900 mt-2">
                 Geliefd bij kapper-ondernemers
               </h2>
             </div>
@@ -316,7 +316,7 @@ export default function HomePage() {
         {/* BOTTOM CTA */}
         <section className="py-20 bg-kami-600 text-white relative overflow-hidden">
           <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center space-y-6">
-            <h2 className="text-3xl sm:text-4xl font-light tracking-tight">
+            <h2 className="font-serif text-3xl sm:text-4xl font-light tracking-tight">
               Klaar voor meer rust en overzicht in jouw salon?
             </h2>
             <p className="text-kami-100 text-base max-w-xl mx-auto leading-relaxed">
