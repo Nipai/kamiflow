@@ -83,30 +83,55 @@ Factuur-e-mails worden automatisch herkend en direct doorgestuurd naar boekhoudp
   - Next.js 14 productie-build (7/7 statische routes foutloos gegenereerd).
   - Docker container herbouwd en live geverifieerd op poort **3002**.
 
+## 2.3 Fase 3: Dashboard & Zen Inbox Verfijning (Voltooid)
+
+- [x] **Zen Barometer ("Alles is rustig in de salon" Status) (`components/dashboard/zen-barometer.tsx`):**
+  - Realtime Wabi-Sabi statusbarometer bovenaan het dashboard.
+  - Wanneer alles is doorgestuurd (`missedCount === 0`): Rustgevende Zen banner met *"Alles is rustig in de salon — 28 facturen geruisloos verwerkt deze maand naar Moneybird. Geen actie vereist."* met 100% Zen Matching indicator.
+  - Wanneer er aandachtspunten zijn (`missedCount > 0`): Geruststellende status met *"X e-mails vragen om een snelle blik"* en een directe filterknop.
+- [x] **Zen Feed (Washi Salon Kaarten) (`components/dashboard/invoice-feed-card.tsx`):**
+  - De kille, administratieve datatabel is getransformeerd naar een esthetische feed met salon-bonkaarten.
+  - Leverancier-monogrammen (Davines, Keune, Nespresso, Salon Ambience, Zettle, L'Oréal).
+  - Categorie-tags (`Haarproducten`, `Koffie & Hospitality`, `Salon Inrichting`, `Software & Pin`).
+  - Duidelijke weergave van factuurbedrag, BTW-indicatie, bijlagenaam en KamiFlow herkenningsscore.
+  - Directe actieknop voor twijfelgevallen (*"Markeer als factuur"*).
+- [x] **Dubbele Weergavemodus (Zen Feed & Salon Register):**
+  - Snelle view-switcher toegevoegd zodat salonhouders naadloos kunnen schakelen tussen de visuele **Zen Feed** en het gestroomlijnde **Register (Tabel)**.
+- [x] **"Totale Rust" Zero-State (`components/dashboard/zen-empty-state.tsx`):**
+  - Wanneer de salonhouder het filter "Aandacht vereist" opent en alle facturen zijn afgehandeld: een serene visuele illustratie met kop koffie, *"Totale rust — Geen openstaande facturen"* en een snelle terugkeerknop.
+- [x] **Verfijnde Factuur Preview & Validatie Modal:**
+  - Uitgebreide factuur-preview met leveranciersgegevens, e-mail snippet, BTW-uitsplitsing, PDF-bijlage en AI-zekerheidsscore.
+  - Gevalideerde doorstuuractie naar Moneybird, Exact Online, e-Boekhouden of Yuki met salonleverancier leervoorkeur.
+- [x] **Kwaliteitsborging & Tests:**
+  - Testsuite uitgebreid in `__tests__/dashboard.test.tsx` van 5 naar 7 tests (totaal 22/22 geslaagd).
+  - Getest op weergave-omschakeling, Zen Barometer statusveranderingen en serene zero-state.
+  - Next.js 14 productie-build (7/7 routes) foutloos.
+
 ---
 
 ## 3. Wat is zojuist voltooid?
-- **Fase 2 (Hero Redesign & Salon Zen Experience)**:
-  - Generieke SaaS-mockup definitief verwijderd.
-  - Tastbare, interactieve salon-factuur visual gebouwd met salonproducten van Keune, Davines en L'Oréal.
-  - Monochrome leveranciersstrip met bekende kappersmerken en boekhoudpakketten toegevoegd.
-  - Emotioneel Bento-tweeluik *Zondagavond zonder vs. mét KamiFlow* geïmplementeerd.
-  - Volledige testsuite (20/20 geslaagd), productie-build voltooid en Docker container geüpdatet.
+- **Fase 3 (Dashboard & Zen Inbox Verfijning)**:
+  - Zen Barometer geïmplementeerd die direct rust en vertrouwen geeft over de status van de salonadministratie.
+  - Zen Feed met esthetische Washi-salonbonnen toegevoegd met leveranciers-monogrammen, categorieën en BTW-uitsplitsing.
+  - Naadloze view-toggle tussen Zen Feed en Klassiek Register.
+  - Serene "Totale rust" zero-state als alle facturen geruisloos zijn afgehandeld.
+  - Uitgebreide preview modal voor salonfacturen en herkenningsvalidatie.
+  - Vitest testsuite uitgebreid naar 22 tests (100% geslaagd).
 
 ---
 
 ## 4. Welke bestanden zijn aangepast/aangemaakt?
-- `components/landing/hero-invoice-flow.tsx`: Nieuw interactief client component met tastbare salon-factuur visual, leverancier-tabs en KamiFlow verificatiezegel.
-- `components/landing/brand-strip.tsx`: Nieuw redactioneel monochroom merkenoverzicht voor beautymerken en boekhoudpartners.
-- `components/landing/sunday-contrast.tsx`: Nieuw asymmetrisch Bento-tweeluik met de emotionele zondagavond-vergelijking.
-- `app/page.tsx`: Volledige integratie van de nieuwe componenten en verfijning van de landingspagina.
-- `TODO.md`: Status en documentatie van Fase 2 bijgewerkt.
+- `components/dashboard/zen-barometer.tsx`: Realtime Zen Barometer met "Alles is rustig in de salon" status en geruststellende meldingen.
+- `components/dashboard/zen-empty-state.tsx`: Rustgevende zero-state illustratie en teksten bij een lege aandachts-inbox of zoekopdracht.
+- `components/dashboard/invoice-feed-card.tsx`: Washi salon-bonkaart component voor de Zen Feed met leveranciers-monogram, categorie, bedrag en actieknoppen.
+- `app/dashboard/page.tsx`: Volledige integratie van de Zen Barometer, Zen Feed, view switcher en verfijnde preview modal.
+- `__tests__/dashboard.test.tsx`: Uitgebreid met tests voor de Zen Barometer, weergave-toggle en de serene zero-state.
+- `TODO.md`: Status en documentatie van Fase 3 bijgewerkt.
 
 ---
 
 ## 5. Logische volgende stap voor een volgende iteratie:
-1. **Fase 3: Dashboard & Zen Inbox Verfijning (`app/dashboard/page.tsx`)**:
-   - Vervangen van de standaard datatabel door een rustgevende minimalistische feed met een "Alles is rustig" statusanimatie wanneer er geen gemiste facturen zijn.
-   - Verbeterde salonfactuur preview modal in de inbox.
-2. **Authenticatie & Supabase integratie:**
-   - Supabase Auth voor Google OAuth & Microsoft 365 koppelingen.
+1. **Authenticatie & Supabase integratie:**
+   - Supabase Auth inrichten voor Google OAuth (Gmail) & Microsoft 365 (Outlook).
+2. **E-mail parsing & IMAP/Webhook logica:**
+   - Echte e-mail connectiviteit en factuurherkenning.

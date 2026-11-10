@@ -73,4 +73,51 @@ describe("Dashboard & Inbox Page (Requirement 3)", () => {
     // Check that "Handmatig gemarkeerd" badge is now shown
     expect(screen.getByText(/Handmatig gemarkeerd/i)).toBeInTheDocument();
   });
+
+  it("renders Zen Barometer and allows toggling between Zen Feed and Table view", () => {
+    render(<DashboardPage />);
+
+    // Check Zen Barometer attention message is present initially (2 missed items)
+    expect(screen.getByText(/e-mails vragen om een snelle blik/i)).toBeInTheDocument();
+
+    // Switch to Table view
+    const tableViewBtn = screen.getByTitle("Overzicht Tabel");
+    fireEvent.click(tableViewBtn);
+    expect(screen.getByRole("table")).toBeInTheDocument();
+
+    // Switch back to Zen Feed
+    const feedViewBtn = screen.getByTitle("Zen Kaarten Feed");
+    fireEvent.click(feedViewBtn);
+    expect(screen.queryByRole("table")).not.toBeInTheDocument();
+  });
+
+  it("shows serene Zen state when all attention items are marked", async () => {
+    render(<DashboardPage />);
+
+    // Filter to attention items
+    const filterTabs = screen.getAllByRole("button", { name: /Aandacht vereist/i });
+    fireEvent.click(filterTabs[0]);
+
+    // Mark first item (Nespresso)
+    let markButtons = screen.getAllByRole("button", { name: /Markeer als factuur/i });
+    fireEvent.click(markButtons[0]);
+    fireEvent.click(screen.getByRole("button", { name: /Bevestig & Direct Doorsturen/i }));
+
+    await waitFor(() => {
+      expect(screen.queryByText(/Markeer als Factuur & Doorsturen/i)).not.toBeInTheDocument();
+    });
+
+    // Mark second item (Zettle)
+    markButtons = screen.getAllByRole("button", { name: /Markeer als factuur/i });
+    fireEvent.click(markButtons[0]);
+    fireEvent.click(screen.getByRole("button", { name: /Bevestig & Direct Doorsturen/i }));
+
+    await waitFor(() => {
+      expect(screen.queryByText(/Markeer als Factuur & Doorsturen/i)).not.toBeInTheDocument();
+    });
+
+    // Both items marked -> Serene "Alles is rustig" barometer and "Totale rust" empty state shown
+    expect(screen.getByText(/Alles is rustig in de salon/i)).toBeInTheDocument();
+    expect(screen.getByText(/Totale rust — Geen openstaande facturen/i)).toBeInTheDocument();
+  });
 });
