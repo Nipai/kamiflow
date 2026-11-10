@@ -548,46 +548,50 @@ export default function DashboardPage() {
               <div className="grid grid-cols-2 gap-3 pt-3 border-t border-sand-200/70 text-xs">
                 <div>
                   <span className="text-stone-400 block text-[10px] uppercase tracking-wider font-medium">
-                    Gedetecteerd bedrag
+                    Upload Bestemming
                   </span>
-                  <strong className="text-sm font-semibold text-stone-900 mt-0.5 block">
-                    {selectedForReview.amount
-                      ? formatCurrency(selectedForReview.amount)
-                      : "Nader te bepalen"}
+                  <strong className="text-xs font-mono font-semibold text-stone-900 mt-0.5 block truncate">
+                    {selectedForReview.uploadDestination || "haarstudiopuur@moneybird.com"}
                   </strong>
-                  {selectedForReview.amount && (
-                    <span className="text-[10px] text-stone-400">
-                      incl. 21% BTW (~{formatCurrency(selectedForReview.amount * 0.21)})
-                    </span>
-                  )}
+                  <span className="text-[10px] text-stone-400">
+                    Boekhoud-upload inbox
+                  </span>
                 </div>
 
                 <div>
                   <span className="text-stone-400 block text-[10px] uppercase tracking-wider font-medium">
-                    Bijlage
+                    PDF Document
                   </span>
-                  {selectedForReview.attachmentName ? (
-                    <div className="flex items-center gap-1.5 text-stone-700 mt-1">
-                      <Paperclip className="w-3.5 h-3.5 text-kami-600 shrink-0" />
-                      <span className="truncate max-w-[150px] font-mono text-[11px]">
-                        {selectedForReview.attachmentName}
-                      </span>
-                    </div>
-                  ) : (
-                    <span className="text-stone-400 italic">Geen PDF bijlage</span>
-                  )}
+                  <div className="flex items-center gap-1.5 text-stone-700 mt-0.5">
+                    <Paperclip className="w-3.5 h-3.5 text-kami-600 shrink-0" />
+                    <span className="truncate max-w-[150px] font-mono text-[11px]">
+                      {selectedForReview.attachmentName}
+                    </span>
+                  </div>
+                  <span className="text-[10px] text-amber-700 block mt-0.5 font-medium">
+                    {selectedForReview.pdfSource === "converted_from_email"
+                      ? "Geen PDF in mail → Wordt omgezet naar PDF"
+                      : "Originele PDF bijlage"}
+                  </span>
                 </div>
               </div>
 
-              {/* Confidence Meter */}
-              <div className="pt-2 border-t border-sand-200/60 flex items-center justify-between text-xs text-stone-500">
-                <span className="inline-flex items-center gap-1 text-[11px]">
-                  <Sparkles className="w-3.5 h-3.5 text-kami-600" />
-                  KamiFlow AI Herkenning
-                </span>
-                <span className="font-semibold text-stone-800">
-                  {selectedForReview.confidenceScore}% zekerheid
-                </span>
+              {/* Confidence Meter & Match Reason */}
+              <div className="pt-2 border-t border-sand-200/60 space-y-1 text-xs text-stone-500">
+                <div className="flex items-center justify-between">
+                  <span className="inline-flex items-center gap-1 text-[11px]">
+                    <Sparkles className="w-3.5 h-3.5 text-kami-600" />
+                    ML/LLM Herkenning (Onderwerp &amp; Body)
+                  </span>
+                  <span className="font-semibold text-stone-800">
+                    {selectedForReview.confidenceScore}% match
+                  </span>
+                </div>
+                {selectedForReview.matchReason && (
+                  <p className="text-[11px] text-stone-500 italic">
+                    {selectedForReview.matchReason}
+                  </p>
+                )}
               </div>
             </div>
 

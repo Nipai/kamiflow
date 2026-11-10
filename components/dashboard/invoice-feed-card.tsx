@@ -11,6 +11,8 @@ import {
   Tag,
   Calendar,
   FileCheck,
+  Send,
+  FileText,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -39,6 +41,7 @@ export function InvoiceFeedCard({
   };
 
   const isMissed = invoice.status === "missed";
+  const isConverted = invoice.pdfSource === "converted_from_email";
 
   return (
     <div
@@ -110,28 +113,44 @@ export function InvoiceFeedCard({
         </p>
 
         {invoice.attachmentName && (
-          <div className="mt-2.5 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-sand-50 border border-sand-200/70 text-xs text-stone-700">
-            <Paperclip className="w-3.5 h-3.5 text-kami-600" />
-            <span className="font-mono text-[11px] truncate max-w-xs">
-              {invoice.attachmentName}
+          <div className="mt-2.5 flex flex-wrap items-center gap-2">
+            <div className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-sand-50 border border-sand-200/70 text-xs text-stone-700">
+              {isConverted ? (
+                <Sparkles className="w-3.5 h-3.5 text-amber-600" />
+              ) : (
+                <Paperclip className="w-3.5 h-3.5 text-kami-600" />
+              )}
+              <span className="font-mono text-[11px] truncate max-w-xs">
+                {invoice.attachmentName}
+              </span>
+            </div>
+
+            <span
+              className={`text-[10px] px-2 py-0.5 rounded-md font-medium border ${
+                isConverted
+                  ? "bg-amber-50 text-amber-800 border-amber-200"
+                  : "bg-emerald-50 text-emerald-800 border-emerald-200"
+              }`}
+            >
+              {isConverted ? "E-mail omgezet naar PDF" : "Originele PDF bijlage"}
             </span>
           </div>
         )}
       </div>
 
-      {/* FOOTER: Amount, Confidence & Action */}
+      {/* FOOTER: Destination, Confidence & Action */}
       <div className="mt-5 pt-4 border-t border-stone-100 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div className="flex items-center gap-6 text-xs text-stone-500">
           <div>
             <span className="text-[11px] text-stone-400 block uppercase tracking-wider font-medium">
-              Factuurbedrag
+              Upload Bestemming
             </span>
-            <span className="text-base font-semibold text-stone-900">
-              {invoice.amount ? formatCurrency(invoice.amount) : "—"}
+            <span className="text-xs font-mono font-medium text-stone-900 truncate max-w-[170px] block">
+              {invoice.uploadDestination || "Moneybird Upload"}
             </span>
-            {invoice.invoiceNumber && (
-              <span className="text-[11px] font-mono text-stone-400 ml-1.5">
-                ({invoice.invoiceNumber})
+            {invoice.amount && (
+              <span className="text-[11px] text-stone-400">
+                {formatCurrency(invoice.amount)}
               </span>
             )}
           </div>
@@ -147,11 +166,11 @@ export function InvoiceFeedCard({
 
           <div className="hidden md:block border-l border-stone-200 pl-6">
             <span className="text-[11px] text-stone-400 block uppercase tracking-wider font-medium">
-              Zen Zekerheid
+              ML Herkenning
             </span>
             <span className="inline-flex items-center gap-1 text-xs font-medium text-stone-700">
               <Sparkles className="w-3 h-3 text-kami-600" />
-              {invoice.confidenceScore}%
+              {invoice.confidenceScore}% zekerheid
             </span>
           </div>
         </div>

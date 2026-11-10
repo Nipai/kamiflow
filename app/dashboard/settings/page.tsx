@@ -12,6 +12,9 @@ import {
   Check,
   Shield,
   HelpCircle,
+  FileText,
+  Clock,
+  Sparkles,
 } from "lucide-react";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -26,6 +29,7 @@ export default function SettingsPage() {
 
   // Settings toggles
   const [autoForwardHighConfidence, setAutoForwardHighConfidence] = React.useState(true);
+  const [autoConvertHtmlToPdf, setAutoConvertHtmlToPdf] = React.useState(true);
   const [notifyOnMissed, setNotifyOnMissed] = React.useState(true);
   const [weeklyDigest, setWeeklyDigest] = React.useState(true);
   const [accountingList, setAccountingList] = React.useState(mockAccountingIntegrations);
@@ -61,7 +65,7 @@ export default function SettingsPage() {
           Instellingen &amp; Koppelingen
         </h1>
         <p className="text-sm text-stone-500 mt-1">
-          Beheer je gekoppelde mailboxen, boekhoudsoftware en herkenningsregels.
+          Beheer je gekoppelde mailboxen, het upload-e-mailadres van je boekhoudsoftware en herkenningsregels.
         </p>
       </div>
 
@@ -83,7 +87,7 @@ export default function SettingsPage() {
               <div>
                 <CardTitle>Gekoppelde Mailboxen</CardTitle>
                 <CardDescription>
-                  Inkomende e-mails van deze adressen worden automatisch geanalyseerd op facturen.
+                  Inkomende e-mails worden periodiek door ML/LLM gecontroleerd op onderwerp en inhoud.
                 </CardDescription>
               </div>
             </div>
@@ -111,7 +115,7 @@ export default function SettingsPage() {
                     </div>
                     <p className="text-xs text-stone-400 mt-0.5">
                       {mb.provider === "gmail" ? "Google Workspace / Gmail" : "Microsoft Outlook 365"} •
-                      Laatste sync: {mb.lastSync}
+                      Check frequentie: elke {mb.checkIntervalMinutes || 15} min • Laatste sync: {mb.lastSync}
                     </p>
                   </div>
                 </div>
@@ -138,7 +142,7 @@ export default function SettingsPage() {
         </CardContent>
       </Card>
 
-      {/* 2. BOEKHOUDSOFTWARE KOPPELINGEN */}
+      {/* 2. BOEKHOUDSOFTWARE UPLOAD-MAIL KOPPELING */}
       <Card>
         <CardHeader>
           <div className="flex items-center gap-3">
@@ -148,7 +152,7 @@ export default function SettingsPage() {
             <div>
               <CardTitle>Boekhoudpakket Koppeling</CardTitle>
               <CardDescription>
-                Kies naar welk boekhoudprogramma KamiFlow automatisch facturen moet doorsluizen.
+                KamiFlow stuurt gedetecteerde facturen direct als PDF door naar het upload-e-mailadres van jouw administratie.
               </CardDescription>
             </div>
           </div>
@@ -180,6 +184,18 @@ export default function SettingsPage() {
                     </div>
                   </div>
 
+                  {/* Upload E-mail configuration */}
+                  {isConnected && acc.uploadEmail && (
+                    <div className="mt-3 pt-2.5 border-t border-sand-200/60">
+                      <span className="text-[10px] uppercase tracking-wider text-stone-400 font-medium block">
+                        Upload e-mailadres boekhouding
+                      </span>
+                      <span className="text-xs font-mono font-medium text-stone-800 truncate block mt-0.5">
+                        {acc.uploadEmail}
+                      </span>
+                    </div>
+                  )}
+
                   <div className="mt-4 pt-3 border-t border-stone-100 flex items-center justify-between">
                     <span className="text-xs text-stone-400">
                       {isConnected ? (
@@ -206,7 +222,7 @@ export default function SettingsPage() {
         </CardContent>
       </Card>
 
-      {/* 3. FACTUUR MATCHING REGELS */}
+      {/* 3. FACTUUR MATCHING & PDF REGELS */}
       <Card>
         <CardHeader>
           <div className="flex items-center gap-3">
@@ -216,7 +232,7 @@ export default function SettingsPage() {
             <div>
               <CardTitle>Automatiserings- &amp; Zen Regels</CardTitle>
               <CardDescription>
-                Bepaal hoe zelfstandig KamiFlow beslissingen neemt bij inkomende e-mails.
+                Bepaal hoe KamiFlow beslissingen neemt bij inkomende e-mails en PDF-afhandeling.
               </CardDescription>
             </div>
           </div>
@@ -229,7 +245,7 @@ export default function SettingsPage() {
                 Automatisch doorsturen bij hoge betrouwbaarheid (&gt;90%)
               </p>
               <p className="text-xs text-stone-500 mt-0.5">
-                Inkoopfacturen van bekende beauty leveranciers worden zonder handmatige tussenkomst doorgestuurd.
+                Inkoopfacturen van bekende beauty leveranciers worden op basis van onderwerp en inhoud direct doorgestuurd.
               </p>
             </div>
             <input
@@ -240,7 +256,28 @@ export default function SettingsPage() {
             />
           </div>
 
-          {/* Rule 2 */}
+          {/* Rule 2: HTML-to-PDF Conversion (The MVP Superpower) */}
+          <div className="flex items-start justify-between gap-4 py-2 border-t border-stone-100">
+            <div>
+              <p className="text-sm font-medium text-stone-900 flex items-center gap-1.5">
+                <span>Automatisch e-mails zonder PDF omzetten naar PDF</span>
+                <span className="text-[10px] px-2 py-0.5 rounded-full bg-amber-100 text-amber-800 font-medium">
+                  Aanbevolen
+                </span>
+              </p>
+              <p className="text-xs text-stone-500 mt-0.5">
+                Wanneer een bestelbon of factuur als HTML in de e-mailtekst staat (zonder bijlage), rendert KamiFlow deze automatisch naar een PDF-bestand zodat je boekhoudpakket hem direct accepteert.
+              </p>
+            </div>
+            <input
+              type="checkbox"
+              checked={autoConvertHtmlToPdf}
+              onChange={(e) => setAutoConvertHtmlToPdf(e.target.checked)}
+              className="mt-1 h-5 w-5 rounded border-stone-300 text-kami-600 focus:ring-kami-500"
+            />
+          </div>
+
+          {/* Rule 3 */}
           <div className="flex items-start justify-between gap-4 py-2 border-t border-stone-100">
             <div>
               <p className="text-sm font-medium text-stone-900">
@@ -258,7 +295,7 @@ export default function SettingsPage() {
             />
           </div>
 
-          {/* Rule 3 */}
+          {/* Rule 4 */}
           <div className="flex items-start justify-between gap-4 py-2 border-t border-stone-100">
             <div>
               <p className="text-sm font-medium text-stone-900">
@@ -278,7 +315,7 @@ export default function SettingsPage() {
         </CardContent>
       </Card>
 
-      {/* 4. SALON GEGEVENS */}
+      {/* 4. SALON PROFIEL */}
       <Card>
         <CardHeader>
           <div className="flex items-center gap-3">
@@ -288,39 +325,49 @@ export default function SettingsPage() {
             <div>
               <CardTitle>Salon Profiel</CardTitle>
               <CardDescription>
-                Jouw contactgegevens voor facturatie en support.
+                Gegevens van jouw salon voor administratieve herkenning en facturatie.
               </CardDescription>
             </div>
           </div>
         </CardHeader>
         <CardContent>
-          <form onSubmit={handleSaveProfile} className="space-y-4">
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <form onSubmit={handleSaveProfile} className="space-y-4 max-w-lg">
+            <div>
+              <label className="block text-xs font-medium text-stone-700 mb-1">
+                Naam van de salon
+              </label>
               <Input
-                label="Salonnaam"
                 value={salonName}
                 onChange={(e) => setSalonName(e.target.value)}
-                required
-              />
-              <Input
-                label="Eigenaar / Contactpersoon"
-                value={contactPerson}
-                onChange={(e) => setContactPerson(e.target.value)}
-                required
-              />
-            </div>
-            <div>
-              <Input
-                label="E-mailadres voor meldingen"
-                type="email"
-                value={emailAddress}
-                onChange={(e) => setEmailAddress(e.target.value)}
-                required
+                placeholder="Bijv. Haarstudio &amp; Spa Puur"
               />
             </div>
 
-            <div className="pt-2 flex justify-end">
-              <Button type="submit" size="sm" className="shadow-subtle">
+            <div>
+              <label className="block text-xs font-medium text-stone-700 mb-1">
+                Contactpersoon / Eigenaar
+              </label>
+              <Input
+                value={contactPerson}
+                onChange={(e) => setContactPerson(e.target.value)}
+                placeholder="Bijv. Emma van Leeuwen"
+              />
+            </div>
+
+            <div>
+              <label className="block text-xs font-medium text-stone-700 mb-1">
+                Primair e-mailadres
+              </label>
+              <Input
+                type="email"
+                value={emailAddress}
+                onChange={(e) => setEmailAddress(e.target.value)}
+                placeholder="emma@haarstudiopuur.nl"
+              />
+            </div>
+
+            <div className="pt-2">
+              <Button type="submit" className="bg-kami-600 hover:bg-kami-700 text-white shadow-soft">
                 Wijzigingen Opslaan
               </Button>
             </div>

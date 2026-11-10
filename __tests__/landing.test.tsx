@@ -28,7 +28,7 @@ describe("Landing Page (Requirement 1)", () => {
 
     expect(screen.getByText(/Gebouwd voor de beautybranche/i)).toBeInTheDocument();
     expect(screen.getByText(/Echte zondagrust/i)).toBeInTheDocument();
-    expect(screen.getByText(/Keune Haircosmetics/i)).toBeInTheDocument();
+    expect(screen.getAllByText(/Keune Haircosmetics/i).length).toBeGreaterThan(0);
   });
 
   it("displays testimonials from salon owners", () => {

@@ -124,7 +124,7 @@ export function SundayContrast() {
                     <Check className="w-3 h-3 stroke-[2.5]" />
                   </div>
                   <span>
-                    Direct gekoppeld aan Moneybird, Exact of e-Boekhouden met de juiste categorie en PDF-bijlage.
+                    Facturen met PDF én losse HTML-bestelbonnen (automatisch omgezet naar PDF) direct doorgestuurd naar je upload-mail.
                   </span>
                 </li>
                 <li className="flex items-start gap-3">

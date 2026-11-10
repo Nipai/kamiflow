@@ -180,10 +180,10 @@ export default function HomePage() {
                   2
                 </div>
                 <h3 className="text-lg font-semibold text-stone-900 mb-2">
-                  Verbind je boekhouding
+                  Koppel je upload-mail
                 </h3>
                 <p className="text-stone-600 text-sm leading-relaxed">
-                  Selecteer Moneybird, Exact Online, e-Boekhouden of Yuki. KamiFlow regelt de directe doorsluis.
+                  Vul het unieke upload-e-mailadres in van je administratie in Moneybird, Exact of e-Boekhouden.
                 </p>
               </div>
 
@@ -195,7 +195,7 @@ export default function HomePage() {
                   Set &amp; Forget
                 </h3>
                 <p className="text-stone-600 text-sm leading-relaxed">
-                  Vanaf nu worden inkomende facturen 24/7 op de achtergrond verwerkt. Jij hoeft er nooit meer naar om te kijken.
+                  KamiFlow checkt periodiek je mails. PDF&apos;s worden direct doorgestuurd; mails zonder PDF worden automatisch omgezet naar een PDF-bestand.
                 </p>
               </div>
             </div>
