@@ -53,6 +53,14 @@ describe("Koppelingen & Instellingen Pages", () => {
     render(<InstellingenPage />);
 
     expect(screen.getByText(/Abonnement & Betalingen/i)).toBeInTheDocument();
+    expect(screen.getByText("Actief (Pro)")).toBeInTheDocument();
+    expect(screen.getByText("iDEAL & SEPA-incasso")).toBeInTheDocument();
+
+    // Open de abonnement wijzigen modal
+    const changePlanBtn = screen.getByRole("button", { name: /Abonnement wijzigen/i });
+    expect(changePlanBtn).toBeInTheDocument();
+    fireEvent.click(changePlanBtn);
+
     expect(screen.getAllByText(/KamiFlow Starter/i).length).toBeGreaterThanOrEqual(1);
     expect(screen.getAllByText(/KamiFlow Pro/i).length).toBeGreaterThanOrEqual(1);
     expect(screen.getAllByText(/KamiFlow Accountant/i).length).toBeGreaterThanOrEqual(1);

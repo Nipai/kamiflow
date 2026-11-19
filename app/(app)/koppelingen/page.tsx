@@ -299,7 +299,7 @@ export default function KoppelingenPage() {
                 <div className="flex items-center justify-between">
                   <span className="font-semibold text-stone-900 text-sm">{acc.name}</span>
                   <Badge variant="info" className="text-[10px]">
-                    E-mail Passthrough
+                    Via upload-mail
                   </Badge>
                 </div>
                 <p className="text-xs text-stone-500 leading-relaxed">

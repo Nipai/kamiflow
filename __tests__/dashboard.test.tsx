@@ -12,13 +12,17 @@ describe("Dashboard & Inbox Page (Requirement 3)", () => {
     expect(screen.getByText(/Aandacht vereist \(Gemist\)/i)).toBeInTheDocument();
   });
 
-  it("renders the inbox table with supplier invoices", () => {
+  it("renders the 4 most recent supplier invoices on the dashboard", () => {
     render(<DashboardPage />);
 
     expect(screen.getByText("Davines Nederland B.V.")).toBeInTheDocument();
     expect(screen.getByText("Keune Haircosmetics")).toBeInTheDocument();
     expect(screen.getByText("Nespresso Professional")).toBeInTheDocument();
     expect(screen.getByText("Salon Ambience Benelux")).toBeInTheDocument();
+
+    const allInvoicesLink = screen.getByRole("link", { name: /Bekijk alle facturen/i });
+    expect(allInvoicesLink).toBeInTheDocument();
+    expect(allInvoicesLink).toHaveAttribute("href", "/facturen");
   });
 
   it("allows searching invoices by supplier name", () => {
@@ -44,22 +48,19 @@ describe("Dashboard & Inbox Page (Requirement 3)", () => {
     expect(screen.queryByText("Davines Nederland B.V.")).not.toBeInTheDocument();
   });
 
-  it("allows marking a missed email as invoice and forwarding it", async () => {
+  it("allows clicking a missed email to open modal and mark as invoice", async () => {
     render(<DashboardPage />);
 
-    // Find the 'Markeer als factuur' button for Nespresso
-    const markButtons = screen.getAllByRole("button", { name: /Markeer als factuur/i });
-    expect(markButtons.length).toBeGreaterThan(0);
-
-    // Click the first one (Nespresso)
-    fireEvent.click(markButtons[0]);
+    // Click on Nespresso Professional card
+    const nespressoCard = screen.getByText("Nespresso Professional");
+    fireEvent.click(nespressoCard);
 
     // Verify modal appears
     expect(screen.getByText(/Markeer als Factuur & Doorsturen/i)).toBeInTheDocument();
     expect(screen.getAllByText("Nespresso Professional").length).toBeGreaterThanOrEqual(2);
 
-    // Confirm forwarding
-    const confirmButton = screen.getByRole("button", { name: /Bevestig & Direct Doorsturen/i });
+    // Confirm forwarding via "Ja, is een factuur"
+    const confirmButton = screen.getByRole("button", { name: /Ja, is een factuur/i });
     fireEvent.click(confirmButton);
 
     // Modal closes and item status updates
@@ -74,21 +75,16 @@ describe("Dashboard & Inbox Page (Requirement 3)", () => {
     expect(screen.getByText(/Handmatig gemarkeerd/i)).toBeInTheDocument();
   });
 
-  it("renders Zen Barometer and allows toggling between Zen Feed and Table view", () => {
+  it("renders Zen Barometer and displays compact invoice cards with link to all invoices", () => {
     render(<DashboardPage />);
 
     // Check Zen Barometer attention message is present initially (2 missed items)
     expect(screen.getByText(/e-mails vragen om een snelle blik/i)).toBeInTheDocument();
 
-    // Switch to Table view
-    const tableViewBtn = screen.getByTitle("Overzicht Tabel");
-    fireEvent.click(tableViewBtn);
-    expect(screen.getByRole("table")).toBeInTheDocument();
-
-    // Switch back to Zen Feed
-    const feedViewBtn = screen.getByTitle("Zen Kaarten Feed");
-    fireEvent.click(feedViewBtn);
-    expect(screen.queryByRole("table")).not.toBeInTheDocument();
+    // Check link to all invoices is present
+    const allInvoicesLink = screen.getByRole("link", { name: /Bekijk alle facturen/i });
+    expect(allInvoicesLink).toBeInTheDocument();
+    expect(allInvoicesLink).toHaveAttribute("href", "/facturen");
   });
 
   it("shows serene Zen state when all attention items are marked", async () => {
@@ -99,18 +95,16 @@ describe("Dashboard & Inbox Page (Requirement 3)", () => {
     fireEvent.click(filterTabs[0]);
 
     // Mark first item (Nespresso)
-    let markButtons = screen.getAllByRole("button", { name: /Markeer als factuur/i });
-    fireEvent.click(markButtons[0]);
-    fireEvent.click(screen.getByRole("button", { name: /Bevestig & Direct Doorsturen/i }));
+    fireEvent.click(screen.getByText("Nespresso Professional"));
+    fireEvent.click(screen.getByRole("button", { name: /Ja, is een factuur/i }));
 
     await waitFor(() => {
       expect(screen.queryByText(/Markeer als Factuur & Doorsturen/i)).not.toBeInTheDocument();
     });
 
     // Mark second item (Zettle)
-    markButtons = screen.getAllByRole("button", { name: /Markeer als factuur/i });
-    fireEvent.click(markButtons[0]);
-    fireEvent.click(screen.getByRole("button", { name: /Bevestig & Direct Doorsturen/i }));
+    fireEvent.click(screen.getByText("Zettle by PayPal"));
+    fireEvent.click(screen.getByRole("button", { name: /Ja, is een factuur/i }));
 
     await waitFor(() => {
       expect(screen.queryByText(/Markeer als Factuur & Doorsturen/i)).not.toBeInTheDocument();

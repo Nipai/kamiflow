@@ -17,12 +17,32 @@ import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/com
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
+import { Modal } from "@/components/ui/modal";
 import { Switch } from "@/components/ui/Switch";
 import { mockProfile } from "@/lib/mock-data";
 import { ProfileRow, PlanTier, SubscriptionStatus } from "@/lib/types";
 import { formatDate } from "@/lib/utils";
 import { createClient } from "@/lib/supabase/client";
 import { PLAN_PRICING } from "@/lib/plans";
+
+const getStatusBadgeLabel = (status: SubscriptionStatus, tier: PlanTier) => {
+  const statusMap: Record<string, string> = {
+    active: "Actief",
+    trialing: "Proefperiode",
+    past_due: "Achterstallig",
+    canceled: "Geannuleerd",
+    incomplete: "In behandeling",
+  };
+  const tierMap: Record<string, string> = {
+    free: "Free",
+    starter: "Starter",
+    pro: "Pro",
+    accountant: "Accountant",
+  };
+  const s = statusMap[status] || status;
+  const t = tierMap[tier] || tier;
+  return `${s} (${t})`;
+};
 
 export default function InstellingenPage() {
   const [profile, setProfile] = React.useState<Partial<ProfileRow>>(mockProfile);
@@ -42,6 +62,7 @@ export default function InstellingenPage() {
 
   const [isSaving, setIsSaving] = React.useState(false);
   const [isUpgradingPlan, setIsUpgradingPlan] = React.useState<PlanTier | null>(null);
+  const [isPlanModalOpen, setIsPlanModalOpen] = React.useState(false);
   const [toastMessage, setToastMessage] = React.useState<string | null>(null);
   const [errorMessage, setErrorMessage] = React.useState<string | null>(null);
 
@@ -198,10 +219,10 @@ export default function InstellingenPage() {
                   ? "info"
                   : "warning"
               }
-              className="text-xs px-3 py-1 uppercase tracking-wider font-mono self-start sm:self-auto"
+              className="text-xs px-3 py-1 font-medium self-start sm:self-auto"
             >
               <span className="w-2 h-2 rounded-full bg-emerald-500 mr-1.5 animate-pulse" />
-              {currentStatus} ({currentTier.toUpperCase()})
+              {getStatusBadgeLabel(currentStatus, currentTier)}
             </Badge>
           </div>
         </CardHeader>
@@ -225,7 +246,7 @@ export default function InstellingenPage() {
               <p className="text-sm font-semibold text-stone-900 mt-0.5 capitalize">
                 {currentStatus === "active" ? "Actief (doorlopend)" : currentStatus}
               </p>
-              <p className="text-stone-500">SEPA BACS / iDEAL machtiging</p>
+              <p className="text-stone-500">iDEAL &amp; SEPA-incasso</p>
             </div>
 
             <div>
@@ -241,69 +262,19 @@ export default function InstellingenPage() {
             </div>
           </div>
 
-          {/* Pricing Tier Grid */}
-          <div className="space-y-3">
-            <h4 className="text-xs font-semibold text-stone-700 uppercase tracking-wider">
-              Abonnement wijzigen of upgraden
-            </h4>
-
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-              {tiers.map((t) => {
-                const plan = PLAN_PRICING[t];
-                const isCurrent = t === currentTier;
-
-                return (
-                  <div
-                    key={t}
-                    className={`p-5 rounded-2xl border transition-all flex flex-col justify-between ${
-                      isCurrent
-                        ? "border-kami-500 bg-kami-50/50 shadow-subtle ring-1 ring-kami-500"
-                        : "border-sand-200 bg-white hover:border-sand-300"
-                    }`}
-                  >
-                    <div>
-                      <div className="flex items-center justify-between">
-                        <span className="font-semibold text-sm text-stone-900">{plan.name}</span>
-                        {isCurrent && (
-                          <Badge variant="success" className="text-[10px]">
-                            Huidig
-                          </Badge>
-                        )}
-                      </div>
-                      <div className="mt-2">
-                        <span className="font-serif text-2xl font-light text-stone-900">
-                          €{plan.amount}
-                        </span>
-                        <span className="text-[11px] text-stone-400 ml-1">/ mnd</span>
-                      </div>
-                      <p className="mt-2 text-xs text-stone-500 leading-relaxed min-h-[40px]">
-                        {plan.description}
-                      </p>
-                    </div>
-
-                    <div className="pt-4 mt-2 border-t border-sand-100">
-                      <Button
-                        size="sm"
-                        disabled={isCurrent || isUpgradingPlan !== null}
-                        onClick={() => handleUpgrade(t)}
-                        variant={isCurrent ? "outline" : "primary"}
-                        className={`w-full text-xs h-8 ${
-                          isCurrent
-                            ? "border-stone-300 text-stone-400 cursor-default"
-                            : "bg-kami-600 hover:bg-kami-700 text-white"
-                        }`}
-                      >
-                        {isUpgradingPlan === t
-                          ? "Laden..."
-                          : isCurrent
-                          ? "Actief"
-                          : `Kies ${t.charAt(0).toUpperCase() + t.slice(1)}`}
-                      </Button>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
+          {/* Abonnement wijzigen knop */}
+          <div className="pt-2 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 border-t border-sand-100">
+            <p className="text-xs text-stone-500">
+              Kies een ander pakket of schaal op wanneer jouw salon groeit.
+            </p>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setIsPlanModalOpen(true)}
+              className="border-sand-300 hover:bg-sand-100 text-stone-800 text-xs font-medium"
+            >
+              Abonnement wijzigen
+            </Button>
           </div>
         </CardContent>
       </Card>
@@ -468,6 +439,72 @@ export default function InstellingenPage() {
           </form>
         </CardContent>
       </Card>
+
+      {/* MODAL / BOTTOM SHEET: ABONNEMENT KEUZE */}
+      <Modal
+        isOpen={isPlanModalOpen}
+        onClose={() => setIsPlanModalOpen(false)}
+        title="Abonnement Wijzigen"
+        description="Kies het KamiFlow pakket dat het beste past bij de omvang van jouw salon."
+      >
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2">
+          {tiers.map((t) => {
+            const plan = PLAN_PRICING[t];
+            const isCurrent = t === currentTier;
+
+            return (
+              <div
+                key={t}
+                className={`p-4 sm:p-5 rounded-2xl border transition-all flex flex-col justify-between ${
+                  isCurrent
+                    ? "border-kami-500 bg-kami-50/50 shadow-subtle ring-1 ring-kami-500"
+                    : "border-sand-200 bg-white hover:border-sand-300"
+                }`}
+              >
+                <div>
+                  <div className="flex items-center justify-between">
+                    <span className="font-semibold text-sm text-stone-900">{plan.name}</span>
+                    {isCurrent && (
+                      <Badge variant="success" className="text-[10px]">
+                        Huidig
+                      </Badge>
+                    )}
+                  </div>
+                  <div className="mt-2">
+                    <span className="font-serif text-2xl font-light text-stone-900">
+                      €{plan.amount}
+                    </span>
+                    <span className="text-[11px] text-stone-400 ml-1">/ mnd</span>
+                  </div>
+                  <p className="mt-2 text-xs text-stone-500 leading-relaxed min-h-[36px]">
+                    {plan.description}
+                  </p>
+                </div>
+
+                <div className="pt-4 mt-2 border-t border-sand-100">
+                  <Button
+                    size="sm"
+                    disabled={isCurrent || isUpgradingPlan !== null}
+                    onClick={() => handleUpgrade(t)}
+                    variant={isCurrent ? "outline" : "primary"}
+                    className={`w-full text-xs h-8 ${
+                      isCurrent
+                        ? "border-stone-300 text-stone-400 cursor-default"
+                        : "bg-kami-600 hover:bg-kami-700 text-white"
+                    }`}
+                  >
+                    {isUpgradingPlan === t
+                      ? "Laden..."
+                      : isCurrent
+                      ? "Actief"
+                      : `Kies ${plan.name}`}
+                  </Button>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </Modal>
     </div>
   );
 }

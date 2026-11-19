@@ -9,14 +9,14 @@ import {
   AlertCircle,
   Search,
   Check,
+  X,
   Paperclip,
   CheckCheck,
   Sparkles,
-  LayoutGrid,
-  List,
   CreditCard,
   ArrowRight,
   ShieldCheck,
+  Building,
 } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -37,17 +37,15 @@ import {
   ProfileRow,
   EmailRow,
 } from "@/lib/types";
-import { formatDate } from "@/lib/utils";
+import { formatDate, formatCurrency, cn } from "@/lib/utils";
 import { ZenBarometer } from "@/components/dashboard/zen-barometer";
 import { ZenEmptyState } from "@/components/dashboard/zen-empty-state";
-import { InvoiceFeedCard } from "@/components/dashboard/invoice-feed-card";
 import { createClient } from "@/lib/supabase/client";
 
 export default function DashboardPage() {
   const [invoices, setInvoices] = React.useState<InvoiceEmail[]>(mockInvoices);
   const [searchQuery, setSearchQuery] = React.useState("");
   const [selectedFilter, setSelectedFilter] = React.useState<"all" | "missed" | "forwarded">("all");
-  const [viewMode, setViewMode] = React.useState<"feed" | "table">("feed");
 
   // Real Supabase data states with initial fallbacks
   const [emailConnections, setEmailConnections] = React.useState<EmailConnectionRow[]>(mockEmailConnections);
@@ -175,6 +173,26 @@ export default function DashboardPage() {
     const sender = selectedForReview.sender;
     setSelectedForReview(null);
     setToastMessage(`"${sender}" is gemarkeerd als factuur en doorgestuurd naar ${targetAccounting}!`);
+    setTimeout(() => setToastMessage(null), 4000);
+  };
+
+  const handleRejectInvoice = () => {
+    if (!selectedForReview) return;
+
+    setInvoices((prev) =>
+      prev.map((item) =>
+        item.id === selectedForReview.id
+          ? {
+              ...item,
+              status: "pending" as InvoiceStatus,
+            }
+          : item
+      )
+    );
+
+    const sender = selectedForReview.sender;
+    setSelectedForReview(null);
+    setToastMessage(`"${sender}" is gemarkeerd als geen factuur.`);
     setTimeout(() => setToastMessage(null), 4000);
   };
 
@@ -346,94 +364,22 @@ export default function DashboardPage() {
         </Card>
       </div>
 
-      {/* RECENT EMAILS BANNER (5 meest recente e-mails uit `email`) */}
-      {recentEmails.length > 0 && (
-        <div className="p-5 rounded-3xl bg-white border border-sand-200 shadow-zen space-y-3">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <Mail className="w-4 h-4 text-kami-600" />
-              <h3 className="text-xs font-semibold text-stone-800 uppercase tracking-wider">
-                Recente e-mailactiviteit (Laatste 5 scans)
-              </h3>
-            </div>
-            <Link
-              href="/facturen"
-              className="text-xs text-kami-700 hover:text-kami-800 font-medium flex items-center gap-1"
-            >
-              <span>Bekijk compleet logboek</span>
-              <ArrowRight className="w-3 h-3" />
-            </Link>
-          </div>
-
-          <div className="divide-y divide-stone-100 text-xs">
-            {recentEmails.map((item) => {
-              const subject = item.subject || "Geen onderwerp";
-              const sender = item.sender || "Onbekende afzender";
-              const date = item.received_date;
-              const status = item.forward_status;
-              const hasPdf = item.pdf_flag;
-
-              return (
-                <div
-                  key={item.id}
-                  className="py-2.5 flex items-center justify-between gap-3 first:pt-1 last:pb-0"
-                >
-                  <div className="flex items-center gap-2.5 min-w-0">
-                    <span
-                      className={`w-2 h-2 rounded-full shrink-0 ${
-                        status === "forwarded"
-                          ? "bg-emerald-500"
-                          : status === "failed"
-                          ? "bg-rose-500"
-                          : "bg-amber-400"
-                      }`}
-                    />
-                    <div className="truncate">
-                      <span className="font-medium text-stone-800 mr-2">{sender.split("<")[0].trim()}</span>
-                      <span className="text-stone-500 truncate">{subject}</span>
-                    </div>
-                  </div>
-
-                  <div className="flex items-center gap-3 shrink-0 text-stone-400">
-                    {hasPdf ? (
-                      <span className="inline-flex items-center gap-1 text-[11px] text-stone-600 bg-sand-100 px-2 py-0.5 rounded">
-                        <Paperclip className="w-3 h-3 text-kami-600" /> PDF
-                      </span>
-                    ) : (
-                      <span className="text-[10px] text-amber-700 bg-amber-50 px-1.5 py-0.5 rounded">
-                        HTML
-                      </span>
-                    )}
-                    <span className="hidden sm:inline text-[11px]">{formatDate(date)}</span>
-                    <Badge
-                      variant={
-                        status === "forwarded"
-                          ? "success"
-                          : status === "failed"
-                          ? "danger"
-                          : "warning"
-                      }
-                      className="text-[10px] py-0 px-2"
-                    >
-                      {status}
-                    </Badge>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        </div>
-      )}
-
-      {/* INBOX SECTION: CONTROLS & CONTENT */}
+      {/* RECENTE FACTUREN & E-MAILS (COMPACTE KAARTEN) */}
       <div className="space-y-4">
-        {/* Controls Bar */}
-        <div className="bg-white/90 rounded-3xl border border-sand-200/90 p-4 sm:p-5 shadow-zen flex flex-col md:flex-row items-stretch md:items-center justify-between gap-4">
+        <div className="flex items-center gap-2">
+          <Mail className="w-4 h-4 text-kami-600" />
+          <h2 className="text-sm font-semibold text-stone-800 tracking-tight">
+            Recente Facturen &amp; E-mails
+          </h2>
+        </div>
+
+        {/* Filter- & Zoekbalk */}
+        <div className="bg-white/90 rounded-2xl border border-sand-200/90 p-3 sm:p-4 shadow-subtle flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
           {/* Tab Filters */}
-          <div className="flex items-center gap-1.5 bg-sand-100/80 p-1 rounded-2xl self-start overflow-x-auto max-w-full">
+          <div className="flex items-center gap-1.5 bg-sand-100/80 p-1 rounded-xl self-start overflow-x-auto max-w-full">
             <button
               onClick={() => setSelectedFilter("all")}
-              className={`px-3.5 py-1.5 rounded-xl text-xs font-medium transition ${
+              className={`px-3 py-1.5 rounded-lg text-xs font-medium transition ${
                 selectedFilter === "all"
                   ? "bg-white text-stone-900 shadow-subtle"
                   : "text-stone-600 hover:text-stone-900"
@@ -443,7 +389,7 @@ export default function DashboardPage() {
             </button>
             <button
               onClick={() => setSelectedFilter("missed")}
-              className={`px-3.5 py-1.5 rounded-xl text-xs font-medium transition flex items-center gap-1.5 ${
+              className={`px-3 py-1.5 rounded-lg text-xs font-medium transition flex items-center gap-1.5 ${
                 selectedFilter === "missed"
                   ? "bg-white text-stone-900 shadow-subtle"
                   : "text-stone-600 hover:text-stone-900"
@@ -458,7 +404,7 @@ export default function DashboardPage() {
             </button>
             <button
               onClick={() => setSelectedFilter("forwarded")}
-              className={`px-3.5 py-1.5 rounded-xl text-xs font-medium transition ${
+              className={`px-3 py-1.5 rounded-lg text-xs font-medium transition ${
                 selectedFilter === "forwarded"
                   ? "bg-white text-stone-900 shadow-subtle"
                   : "text-stone-600 hover:text-stone-900"
@@ -468,47 +414,20 @@ export default function DashboardPage() {
             </button>
           </div>
 
-          {/* Right: Search Box & View Mode Toggle */}
-          <div className="flex items-center gap-3">
-            <div className="relative w-full sm:w-64">
-              <Search className="w-4 h-4 text-stone-400 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
-              <input
-                type="text"
-                placeholder="Zoek op leverancier of nummer..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full pl-9 pr-3.5 py-2 text-xs bg-sand-50/60 border border-sand-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-kami-500/20 focus:border-kami-600 transition"
-              />
-            </div>
-
-            <div className="hidden sm:flex items-center bg-sand-100/80 p-1 rounded-xl">
-              <button
-                onClick={() => setViewMode("feed")}
-                className={`p-1.5 rounded-lg text-xs transition ${
-                  viewMode === "feed"
-                    ? "bg-white text-stone-900 shadow-subtle"
-                    : "text-stone-500 hover:text-stone-900"
-                }`}
-                title="Zen Kaarten Feed"
-              >
-                <LayoutGrid className="w-4 h-4" />
-              </button>
-              <button
-                onClick={() => setViewMode("table")}
-                className={`p-1.5 rounded-lg text-xs transition ${
-                  viewMode === "table"
-                    ? "bg-white text-stone-900 shadow-subtle"
-                    : "text-stone-500 hover:text-stone-900"
-                }`}
-                title="Overzicht Tabel"
-              >
-                <List className="w-4 h-4" />
-              </button>
-            </div>
+          {/* Zoekbalk */}
+          <div className="relative w-full sm:w-64">
+            <Search className="w-4 h-4 text-stone-400 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+            <input
+              type="text"
+              placeholder="Zoek op leverancier of nummer..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="w-full pl-9 pr-3.5 py-1.5 text-xs bg-sand-50/60 border border-sand-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-kami-500/20 focus:border-kami-600 transition"
+            />
           </div>
         </div>
 
-        {/* CONTENT AREA: ZEN FEED OR TABLE */}
+        {/* ULTRA-CLEANE COMPACTE FACTUURKAARTEN (MAX 4) */}
         {filteredInvoices.length === 0 ? (
           <ZenEmptyState
             isMissedFilter={selectedFilter === "missed"}
@@ -517,231 +436,159 @@ export default function DashboardPage() {
             onResetSearch={() => setSearchQuery("")}
             accountingSoftware={mockSalonProfile.accountingSoftware}
           />
-        ) : viewMode === "feed" ? (
-          <div className="space-y-3.5">
-            {filteredInvoices.map((inv) => (
-              <InvoiceFeedCard
-                key={inv.id}
-                invoice={inv}
-                onOpenDetails={handleOpenDetails}
-                onMarkInvoice={handleOpenMarkModal}
-              />
-            ))}
-            <div className="py-3 px-4 text-center text-xs text-stone-400">
-              Weergave van {filteredInvoices.length} e-mails in de Zen Feed
-            </div>
-          </div>
         ) : (
-          <div className="bg-white rounded-3xl border border-sand-200/90 shadow-zen overflow-hidden">
-            <div className="overflow-x-auto">
-              <table className="w-full text-left text-sm" role="table">
-                <thead>
-                  <tr className="border-b border-sand-200/80 bg-sand-50/60 text-[11px] font-semibold text-stone-500 uppercase tracking-wider">
-                    <th className="py-3.5 px-6">Status</th>
-                    <th className="py-3.5 px-6">Leverancier</th>
-                    <th className="py-3.5 px-6">Onderwerp &amp; Bijlage</th>
-                    <th className="py-3.5 px-6">Categorie</th>
-                    <th className="py-3.5 px-6">Datum</th>
-                    <th className="py-3.5 px-6 text-right">Actie</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-stone-100 text-stone-700">
-                  {filteredInvoices.map((inv) => (
-                    <tr
-                      key={inv.id}
-                      className={`hover:bg-sand-50/60 transition-colors ${
-                        inv.status === "missed" ? "bg-amber-50/30" : ""
-                      }`}
+          <div className="space-y-2.5">
+            {filteredInvoices.slice(0, 4).map((inv) => {
+              const isForwarded = inv.status === "forwarded" || inv.status === "manual_confirmed";
+              const statusLabel =
+                inv.status === "manual_confirmed"
+                  ? "Handmatig gemarkeerd"
+                  : isForwarded
+                  ? "Doorgestuurd"
+                  : "Check nodig";
+
+              return (
+                <div
+                  key={inv.id}
+                  role="button"
+                  tabIndex={0}
+                  onClick={() => setSelectedForReview(inv)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" || e.key === " ") {
+                      e.preventDefault();
+                      setSelectedForReview(inv);
+                    }
+                  }}
+                  className="w-full text-left p-4 sm:p-4.5 rounded-2xl bg-white border border-sand-200/90 hover:border-kami-300 shadow-subtle hover:shadow-zen transition-all duration-200 flex items-center justify-between gap-4 cursor-pointer group active:scale-[0.99] select-none"
+                  aria-label={`Factuur ${inv.sender}`}
+                >
+                  {/* Links: Leverancier (vet) + korte datum eronder */}
+                  <div className="min-w-0 flex-1">
+                    <div className="font-semibold text-stone-900 truncate text-sm sm:text-base group-hover:text-kami-700 transition-colors">
+                      {inv.sender}
+                    </div>
+                    <div className="text-xs text-stone-400 mt-0.5">
+                      {formatDate(inv.receivedAt)}
+                    </div>
+                  </div>
+
+                  {/* Rechts: Bedrag (indien bekend) + één zachte status-pil */}
+                  <div className="flex items-center gap-3 shrink-0">
+                    {inv.amount !== undefined && inv.amount !== null && (
+                      <span className="font-medium text-stone-900 text-xs sm:text-sm">
+                        {formatCurrency(inv.amount)}
+                      </span>
+                    )}
+                    <span
+                      className={cn(
+                        "px-2.5 py-1 rounded-full text-xs font-medium border transition-colors",
+                        isForwarded
+                          ? "bg-emerald-50 text-emerald-800 border-emerald-200/60"
+                          : "bg-amber-50 text-amber-800 border-amber-200/60"
+                      )}
                     >
-                      <td className="py-4 px-6 whitespace-nowrap">
-                        {inv.status === "forwarded" && (
-                          <Badge variant="success">
-                            <Check className="w-3 h-3" />
-                            Doorgestuurd
-                          </Badge>
-                        )}
-                        {inv.status === "manual_confirmed" && (
-                          <Badge variant="info">
-                            <CheckCheck className="w-3 h-3 text-kami-700" />
-                            Handmatig gemarkeerd
-                          </Badge>
-                        )}
-                        {inv.status === "missed" && (
-                          <Badge variant="warning">
-                            <AlertCircle className="w-3 h-3 text-amber-600" />
-                            Niet herkend
-                          </Badge>
-                        )}
-                        {inv.status === "pending" && (
-                          <Badge variant="neutral">In verwerking</Badge>
-                        )}
-                      </td>
-
-                      <td className="py-4 px-6">
-                        <div className="font-medium text-stone-900 truncate max-w-[180px]">
-                          {inv.sender}
-                        </div>
-                        <div className="text-xs text-stone-400 truncate max-w-[180px]">
-                          {inv.senderEmail}
-                        </div>
-                      </td>
-
-                      <td className="py-4 px-6 max-w-xs">
-                        <div className="font-medium text-stone-800 truncate" title={inv.subject}>
-                          {inv.subject}
-                        </div>
-                        {inv.attachmentName && (
-                          <div className="flex items-center gap-1 text-[11px] text-stone-500 mt-1">
-                            <Paperclip className="w-3 h-3 text-stone-400" />
-                            <span className="truncate max-w-[200px]">{inv.attachmentName}</span>
-                          </div>
-                        )}
-                      </td>
-
-                      <td className="py-4 px-6 whitespace-nowrap">
-                        <span className="inline-block px-2.5 py-0.5 rounded-lg bg-stone-100 text-stone-600 text-xs font-normal">
-                          {inv.category || "Algemeen"}
-                        </span>
-                      </td>
-
-                      <td className="py-4 px-6 whitespace-nowrap text-xs text-stone-500">
-                        {formatDate(inv.receivedAt)}
-                      </td>
-
-                      <td className="py-4 px-6 whitespace-nowrap text-right">
-                        {inv.status === "missed" ? (
-                          <Button
-                            size="sm"
-                            onClick={() => handleOpenMarkModal(inv)}
-                            className="bg-amber-600 hover:bg-amber-700 text-white shadow-subtle text-xs"
-                          >
-                            Markeer als factuur
-                          </Button>
-                        ) : (
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => handleOpenDetails(inv)}
-                            className="text-xs text-stone-500 hover:text-stone-800"
-                          >
-                            {inv.accountingTarget || "Gekoppeld"}
-                          </Button>
-                        )}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-
-            <div className="p-4 bg-sand-50/50 border-t border-sand-200/80 flex items-center justify-between text-xs text-stone-500">
-              <span>Weergave van {filteredInvoices.length} e-mails</span>
-              <span className="italic">
-                Tip: Mis je een e-mail? Klik op &lsquo;Markeer als factuur&rsquo; om het systeem te leren.
-              </span>
-            </div>
+                      {statusLabel}
+                    </span>
+                  </div>
+                </div>
+              );
+            })}
           </div>
         )}
+
+        {/* Link / Knop naar alle facturen */}
+        <div className="pt-2 flex justify-center">
+          <Link
+            href="/facturen"
+            className="inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-2xl bg-white border border-sand-200 hover:border-kami-300 text-stone-700 hover:text-stone-900 text-xs font-medium shadow-subtle hover:shadow-zen transition-all group"
+          >
+            <span>Bekijk alle facturen →</span>
+          </Link>
+        </div>
       </div>
 
-      {/* RICH MODAL: MARKEER ALS FACTUUR / INVOICE PREVIEW */}
+      {/* BOTTOM SHEET (op mobiel) / MODAL (op desktop) */}
       <Modal
         isOpen={!!selectedForReview}
         onClose={() => setSelectedForReview(null)}
         title={
           selectedForReview?.status === "missed"
             ? "Markeer als Factuur & Doorsturen"
-            : "Salonfactuur Details & Doorsturing"
+            : selectedForReview?.sender || "Factuur Details"
         }
         description={
           selectedForReview?.status === "missed"
             ? "Corrigeer en valideer deze inkomende e-mail voor jouw boekhouding."
-            : "Inzage in de geverifieerde salonfactuur en gekoppelde boekhouding."
+            : "Controleer de factuurgegevens en gekoppelde boekhouding."
         }
       >
         {selectedForReview && (
-          <div className="space-y-5">
-            <div className="p-4 sm:p-5 rounded-2xl bg-sand-50/70 border border-sand-200 space-y-3.5">
-              <div className="flex items-start justify-between gap-3">
-                <div>
-                  <span className="text-[10px] font-semibold text-stone-400 uppercase tracking-wider">
-                    Afzender &amp; Leverancier
-                  </span>
-                  <p className="text-base font-semibold text-stone-900 mt-0.5">
-                    {selectedForReview.sender}
-                  </p>
-                  <p className="text-xs text-stone-500">{selectedForReview.senderEmail}</p>
-                </div>
-                {selectedForReview.category && (
-                  <span className="px-2.5 py-1 rounded-lg bg-white border border-sand-200 text-stone-600 text-xs font-medium shadow-subtle">
-                    {selectedForReview.category}
-                  </span>
-                )}
+          <div className="space-y-4 text-xs">
+            {/* Details overzicht */}
+            <div className="p-4 sm:p-4.5 rounded-2xl bg-sand-50/70 border border-sand-200/80 space-y-3">
+              {/* Afzender e-mail */}
+              <div>
+                <span className="text-[10px] uppercase font-semibold text-stone-400 tracking-wider block">
+                  E-mailadres afzender
+                </span>
+                <p className="font-mono text-xs text-stone-800 mt-0.5 break-all">
+                  {selectedForReview.senderEmail}
+                </p>
               </div>
 
+              {/* Onderwerp */}
               <div>
-                <span className="text-[10px] font-semibold text-stone-400 uppercase tracking-wider">
+                <span className="text-[10px] uppercase font-semibold text-stone-400 tracking-wider block">
                   Onderwerp
                 </span>
-                <p className="text-xs text-stone-800 mt-0.5 leading-relaxed">{selectedForReview.subject}</p>
-                {selectedForReview.snippet && (
-                  <p className="text-[11px] text-stone-500 italic mt-1 bg-white/60 p-2 rounded-lg border border-sand-200/50">
+                <p className="font-medium text-xs text-stone-900 mt-0.5">
+                  {selectedForReview.subject || "(Geen onderwerp)"}
+                </p>
+              </div>
+
+              {/* Tekstfragment */}
+              {selectedForReview.snippet && (
+                <div>
+                  <span className="text-[10px] uppercase font-semibold text-stone-400 tracking-wider block">
+                    Tekstfragment
+                  </span>
+                  <p className="text-[11px] text-stone-600 italic bg-white/70 p-2.5 rounded-xl border border-sand-200/60 mt-0.5 leading-relaxed">
                     &ldquo;{selectedForReview.snippet}&rdquo;
                   </p>
-                )}
-              </div>
-
-              <div className="grid grid-cols-2 gap-3 pt-3 border-t border-sand-200/70 text-xs">
-                <div>
-                  <span className="text-stone-400 block text-[10px] uppercase tracking-wider font-medium">
-                    Upload Bestemming
-                  </span>
-                  <strong className="text-xs font-mono font-semibold text-stone-900 mt-0.5 block truncate">
-                    {selectedForReview.uploadDestination || "haarstudiopuur@moneybird.com"}
-                  </strong>
-                  <span className="text-[10px] text-stone-400">
-                    Boekhoud-upload inbox
-                  </span>
                 </div>
+              )}
 
+              {/* PDF Bestandsnaam & Boekhoudbestemming */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2.5 border-t border-sand-200/60">
                 <div>
-                  <span className="text-stone-400 block text-[10px] uppercase tracking-wider font-medium">
+                  <span className="text-[10px] uppercase font-semibold text-stone-400 tracking-wider block">
                     PDF Document
                   </span>
-                  <div className="flex items-center gap-1.5 text-stone-700 mt-0.5">
+                  <div className="flex items-center gap-1.5 text-stone-800 font-mono text-[11px] mt-0.5 truncate">
                     <Paperclip className="w-3.5 h-3.5 text-kami-600 shrink-0" />
-                    <span className="truncate max-w-[150px] font-mono text-[11px]">
-                      {selectedForReview.attachmentName}
+                    <span className="truncate">
+                      {selectedForReview.attachmentName || "Factuur_omgezet.pdf"}
                     </span>
                   </div>
-                  <span className="text-[10px] text-amber-700 block mt-0.5 font-medium">
-                    {selectedForReview.pdfSource === "converted_from_email"
-                      ? "Geen PDF in mail → Wordt omgezet naar PDF"
-                      : "Originele PDF bijlage"}
-                  </span>
                 </div>
-              </div>
 
-              <div className="pt-2 border-t border-sand-200/60 space-y-1 text-xs text-stone-500">
-                <div className="flex items-center justify-between">
-                  <span className="inline-flex items-center gap-1 text-[11px]">
-                    <Sparkles className="w-3.5 h-3.5 text-kami-600" />
-                    Slimme herkenning (Onderwerp &amp; Bericht)
+                <div>
+                  <span className="text-[10px] uppercase font-semibold text-stone-400 tracking-wider block">
+                    Boekhoudbestemming
                   </span>
-                  <span className="font-semibold text-stone-800">
-                    {selectedForReview.confidenceScore}% zekerheid
-                  </span>
+                  <div className="flex items-center gap-1.5 text-stone-800 font-mono text-[11px] mt-0.5 truncate">
+                    <Building className="w-3.5 h-3.5 text-kami-600 shrink-0" />
+                    <span className="truncate">
+                      {selectedForReview.uploadDestination || "haarstudiopuur@moneybird.com"}
+                    </span>
+                  </div>
                 </div>
-                {selectedForReview.matchReason && (
-                  <p className="text-[11px] text-stone-500 italic">
-                    {selectedForReview.matchReason}
-                  </p>
-                )}
               </div>
             </div>
 
+            {/* Actieknoppen */}
             {selectedForReview.status === "missed" ? (
-              <>
+              <div className="space-y-3 pt-1">
                 <div>
                   <label className="block text-xs font-medium text-stone-700 mb-1.5">
                     Doorsturen naar boekhouding
@@ -749,7 +596,7 @@ export default function DashboardPage() {
                   <select
                     value={targetAccounting}
                     onChange={(e) => setTargetAccounting(e.target.value)}
-                    className="w-full px-3.5 py-2.5 text-sm bg-white border border-sand-200 rounded-xl text-stone-900 focus:outline-none focus:ring-2 focus:ring-kami-500/20 focus:border-kami-600 shadow-subtle"
+                    className="w-full px-3.5 py-2 text-xs bg-white border border-sand-200 rounded-xl text-stone-900 focus:outline-none focus:ring-2 focus:ring-kami-500/20 focus:border-kami-600 shadow-subtle"
                   >
                     <option value="Moneybird (Inkoop)">Moneybird (Inkoopfacturen)</option>
                     <option value="Exact Online (Boekhouding)">Exact Online</option>
@@ -767,40 +614,58 @@ export default function DashboardPage() {
                   />
                   <label htmlFor="remember" className="text-xs text-stone-600 leading-normal cursor-pointer select-none">
                     Onthoud <strong>{selectedForReview.sender}</strong> als vaste salonleverancier
-                    zodat toekomstige facturen automatisch doorgestuurd worden.
                   </label>
                 </div>
 
-                <div className="pt-3 flex items-center justify-end gap-3 border-t border-stone-100">
-                  <Button
-                    variant="outline"
-                    size="sm"
+                <div className="pt-2 space-y-2">
+                  <span className="text-xs font-medium text-stone-700 block">
+                    Is dit een factuur voor de salon?
+                  </span>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <button
+                      type="button"
+                      onClick={handleConfirmMarkAsInvoice}
+                      className="w-full py-3.5 sm:py-3 px-4 rounded-2xl bg-kami-600 hover:bg-kami-700 text-white font-semibold text-xs shadow-soft transition-all active:scale-[0.98] flex items-center justify-center gap-2 cursor-pointer"
+                    >
+                      <Check className="w-4 h-4 shrink-0" />
+                      <span>Ja, is een factuur</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={handleRejectInvoice}
+                      className="w-full py-3.5 sm:py-3 px-4 rounded-2xl border border-stone-200 hover:bg-rose-50 hover:text-rose-700 hover:border-rose-200 text-stone-600 font-medium text-xs transition-all active:scale-[0.98] flex items-center justify-center gap-2 cursor-pointer"
+                    >
+                      <X className="w-4 h-4 text-rose-500 shrink-0" />
+                      <span>Nee, geen factuur</span>
+                    </button>
+                  </div>
+                </div>
+
+                <div className="pt-2 flex justify-end">
+                  <button
+                    type="button"
                     onClick={() => setSelectedForReview(null)}
-                    className="text-xs"
+                    className="text-xs text-stone-400 hover:text-stone-600 py-1 px-2"
                   >
                     Annuleren
-                  </Button>
-                  <Button
-                    size="sm"
-                    onClick={handleConfirmMarkAsInvoice}
-                    className="bg-kami-600 hover:bg-kami-700 shadow-soft text-xs"
-                  >
-                    <Check className="w-4 h-4 mr-1" />
-                    Bevestig &amp; Direct Doorsturen
-                  </Button>
+                  </button>
                 </div>
-              </>
+              </div>
             ) : (
-              <div className="space-y-4 pt-1">
+              <div className="space-y-3 pt-1">
                 <div className="p-3 rounded-xl bg-emerald-50 border border-emerald-200 text-xs text-emerald-900 flex items-center justify-between">
                   <div className="flex items-center gap-2">
                     <CheckCheck className="w-4 h-4 text-emerald-600" />
-                    <span>Gekoppeld en doorgestuurd naar <strong>{selectedForReview.accountingTarget || "Moneybird"}</strong></span>
+                    <span>
+                      Gekoppeld en doorgestuurd naar <strong>{selectedForReview.accountingTarget || "Moneybird"}</strong>
+                    </span>
                   </div>
-                  <span className="text-[10px] text-emerald-700 font-mono">0 sec. handmatig werk</span>
+                  <span className="text-[10px] text-emerald-700 font-mono">Doorgestuurd</span>
                 </div>
 
-                <div className="flex justify-end pt-2">
+                <div className="flex justify-end pt-1">
                   <Button
                     variant="outline"
                     size="sm"
