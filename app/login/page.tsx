@@ -338,7 +338,7 @@ export default function LoginPage({ initialMode = "login" }: LoginPageProps) {
                     <Input
                       label="Salonnaam / Bedrijfsnaam"
                       type="text"
-                      value={salonName}
+                      value=
                       onChange={(e) => setSalonName(e.target.value)}
                       placeholder="Haarstudio Puur"
                     />
@@ -349,7 +349,7 @@ export default function LoginPage({ initialMode = "login" }: LoginPageProps) {
                   <Input
                     label="Zakelijk e-mailadres"
                     type="email"
-                    value={email}
+                    value=
                     onChange={(e) => setEmail(e.target.value)}
                     placeholder="naam@jouwsalon.nl"
                     required
@@ -374,7 +374,7 @@ export default function LoginPage({ initialMode = "login" }: LoginPageProps) {
                     </div>
                     <Input
                       type="password"
-                      value={password}
+                      value=
                       onChange={(e) => setPassword(e.target.value)}
                       placeholder="••••••••••••"
                       required
