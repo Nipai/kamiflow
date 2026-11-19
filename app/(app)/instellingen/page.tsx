@@ -1,0 +1,473 @@
+"use client";
+
+import * as React from "react";
+import {
+  Building,
+  CreditCard,
+  CheckCircle2,
+  Sparkles,
+  Shield,
+  Check,
+  ArrowRight,
+  Clock,
+  AlertCircle,
+  ExternalLink,
+} from "lucide-react";
+import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
+import { Switch } from "@/components/ui/Switch";
+import { mockProfile } from "@/lib/mock-data";
+import { ProfileRow, PlanTier, SubscriptionStatus } from "@/lib/types";
+import { formatDate } from "@/lib/utils";
+import { createClient } from "@/lib/supabase/client";
+import { PLAN_PRICING } from "@/lib/plans";
+
+export default function InstellingenPage() {
+  const [profile, setProfile] = React.useState<Partial<ProfileRow>>(mockProfile);
+  const [formData, setFormData] = React.useState({
+    first_name: mockProfile.first_name || "",
+    last_name: mockProfile.last_name || "",
+    company_name: mockProfile.company_name || "",
+    company_address: mockProfile.company_address || "",
+    company_vat_number: mockProfile.company_vat_number || "",
+  });
+
+  const [zenRules, setZenRules] = React.useState({
+    autoConvertToPdf: true,
+    smartSupplierRecognition: true,
+    sundayPeace: true,
+  });
+
+  const [isSaving, setIsSaving] = React.useState(false);
+  const [isUpgradingPlan, setIsUpgradingPlan] = React.useState<PlanTier | null>(null);
+  const [toastMessage, setToastMessage] = React.useState<string | null>(null);
+  const [errorMessage, setErrorMessage] = React.useState<string | null>(null);
+
+  // Load profile from Supabase
+  React.useEffect(() => {
+    async function loadProfile() {
+      try {
+        const supabase = createClient();
+        const { data, error } = await supabase
+          .from("profiles")
+          .select("*")
+          .limit(1)
+          .single();
+
+        if (data && !error) {
+          setProfile(data);
+          setFormData({
+            first_name: data.first_name || "",
+            last_name: data.last_name || "",
+            company_name: data.company_name || "",
+            company_address: data.company_address || "",
+            company_vat_number: data.company_vat_number || "",
+          });
+        }
+      } catch (err) {
+        // Fallback to initial mockProfile
+      }
+    }
+    loadProfile();
+  }, []);
+
+  // Save company details form
+  const handleSaveProfile = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsSaving(true);
+    setErrorMessage(null);
+
+    try {
+      const supabase = createClient();
+      await supabase
+        .from("profiles")
+        .update({
+          first_name: formData.first_name,
+          last_name: formData.last_name,
+          company_name: formData.company_name,
+          company_address: formData.company_address,
+          company_vat_number: formData.company_vat_number,
+        })
+        .limit(1);
+
+      setProfile((prev) => ({
+        ...prev,
+        ...formData,
+      }));
+
+      setToastMessage("Bedrijfsgegevens zijn succesvol opgeslagen!");
+      setTimeout(() => setToastMessage(null), 4000);
+    } catch (err: any) {
+      console.error("Fout bij opslaan profiel:", err);
+      setToastMessage("Profielwijzigingen lokaal opgeslagen!");
+      setTimeout(() => setToastMessage(null), 3000);
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  // Upgrade Plan via Mollie Checkout route
+  const handleUpgrade = async (tier: PlanTier) => {
+    setIsUpgradingPlan(tier);
+    setErrorMessage(null);
+
+    try {
+      const res = await fetch("/api/mollie/checkout", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          planTier: tier,
+          redirectUrl: `${window.location.origin}/instellingen?payment=success&tier=${tier}`,
+        }),
+      });
+
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.error || "Fout bij starten Mollie checkout");
+      }
+
+      if (data.checkoutUrl) {
+        // Stuur door naar Mollie betaalscherm (of dev return URL)
+        window.location.href = data.checkoutUrl;
+      } else {
+        setToastMessage(`Aanvraag voor ${tier} gereed: ${data.paymentId}`);
+      }
+    } catch (err: any) {
+      console.error("Mollie checkout trigger error:", err);
+      setErrorMessage(err.message || "Er is een fout opgetreden bij het doorsturen naar Mollie.");
+    } finally {
+      setIsUpgradingPlan(null);
+    }
+  };
+
+  const currentTier = profile.plan_tier || "pro";
+  const currentStatus = profile.subscription_status || "active";
+
+  const tiers: PlanTier[] = ["free", "starter", "pro", "accountant"];
+
+  return (
+    <div className="space-y-8 max-w-5xl">
+      {/* HEADER */}
+      <div>
+        <h1 className="font-serif text-2xl sm:text-3xl font-light text-stone-900 tracking-tight">
+          Instellingen &amp; Abonnement
+        </h1>
+        <p className="text-sm text-stone-500 mt-1">
+          Beheer je salon bedrijfsgegevens, automatiseringsregels en abonnement.
+        </p>
+      </div>
+
+      {/* TOAST / ALERTS */}
+      {toastMessage && (
+        <div className="p-4 rounded-2xl bg-emerald-50 border border-emerald-200 text-emerald-900 flex items-center gap-2 text-sm shadow-zen animate-in fade-in">
+          <CheckCircle2 className="w-5 h-5 text-emerald-600 shrink-0" />
+          <span>{toastMessage}</span>
+        </div>
+      )}
+
+      {errorMessage && (
+        <div className="p-4 rounded-2xl bg-rose-50 border border-rose-200 text-rose-900 flex items-center gap-2 text-sm shadow-zen animate-in fade-in">
+          <AlertCircle className="w-5 h-5 text-rose-600 shrink-0" />
+          <span>{errorMessage}</span>
+        </div>
+      )}
+
+      {/* 1. HUIDIG ABONNEMENTSOVERZICHT (MOLLIE) */}
+      <Card>
+        <CardHeader>
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+            <div className="flex items-center gap-3">
+              <div className="w-9 h-9 rounded-xl bg-kami-100 flex items-center justify-center text-kami-700">
+                <CreditCard className="w-5 h-5" />
+              </div>
+              <div>
+                <CardTitle>Abonnement &amp; Betalingen (Mollie iDEAL / SEPA)</CardTitle>
+                <CardDescription>
+                  Geautomatiseerde incasso via Mollie. Geen onverwachte kosten.
+                </CardDescription>
+              </div>
+            </div>
+
+            <Badge
+              variant={
+                currentStatus === "active"
+                  ? "success"
+                  : currentStatus === "trialing"
+                  ? "info"
+                  : "warning"
+              }
+              className="text-xs px-3 py-1 uppercase tracking-wider font-mono self-start sm:self-auto"
+            >
+              <span className="w-2 h-2 rounded-full bg-emerald-500 mr-1.5 animate-pulse" />
+              {currentStatus} ({currentTier.toUpperCase()})
+            </Badge>
+          </div>
+        </CardHeader>
+        <CardContent className="space-y-6">
+          {/* Status highlight strip */}
+          <div className="p-4 rounded-2xl bg-sand-50/70 border border-sand-200 grid grid-cols-1 sm:grid-cols-3 gap-4 text-xs">
+            <div>
+              <span className="text-[10px] uppercase font-semibold text-stone-400 tracking-wider">
+                Huidig Plan
+              </span>
+              <p className="text-sm font-semibold text-stone-900 mt-0.5">
+                {PLAN_PRICING[currentTier]?.name || currentTier}
+              </p>
+              <p className="text-stone-500">€{PLAN_PRICING[currentTier]?.amount} / maand</p>
+            </div>
+
+            <div>
+              <span className="text-[10px] uppercase font-semibold text-stone-400 tracking-wider">
+                Abonnementsstatus
+              </span>
+              <p className="text-sm font-semibold text-stone-900 mt-0.5 capitalize">
+                {currentStatus === "active" ? "Actief (doorlopend)" : currentStatus}
+              </p>
+              <p className="text-stone-500">SEPA BACS / iDEAL machtiging</p>
+            </div>
+
+            <div>
+              <span className="text-[10px] uppercase font-semibold text-stone-400 tracking-wider">
+                Volgende verlenging
+              </span>
+              <p className="text-sm font-semibold text-stone-900 mt-0.5">
+                {profile.current_period_end
+                  ? formatDate(profile.current_period_end)
+                  : "Eind van de lopende periode"}
+              </p>
+              <p className="text-stone-500">Automatische periodieke incasso</p>
+            </div>
+          </div>
+
+          {/* Pricing Tier Grid */}
+          <div className="space-y-3">
+            <h4 className="text-xs font-semibold text-stone-700 uppercase tracking-wider">
+              Abonnement wijzigen of upgraden
+            </h4>
+
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+              {tiers.map((t) => {
+                const plan = PLAN_PRICING[t];
+                const isCurrent = t === currentTier;
+
+                return (
+                  <div
+                    key={t}
+                    className={`p-5 rounded-2xl border transition-all flex flex-col justify-between ${
+                      isCurrent
+                        ? "border-kami-500 bg-kami-50/50 shadow-subtle ring-1 ring-kami-500"
+                        : "border-sand-200 bg-white hover:border-sand-300"
+                    }`}
+                  >
+                    <div>
+                      <div className="flex items-center justify-between">
+                        <span className="font-semibold text-sm text-stone-900">{plan.name}</span>
+                        {isCurrent && (
+                          <Badge variant="success" className="text-[10px]">
+                            Huidig
+                          </Badge>
+                        )}
+                      </div>
+                      <div className="mt-2">
+                        <span className="font-serif text-2xl font-light text-stone-900">
+                          €{plan.amount}
+                        </span>
+                        <span className="text-[11px] text-stone-400 ml-1">/ mnd</span>
+                      </div>
+                      <p className="mt-2 text-xs text-stone-500 leading-relaxed min-h-[40px]">
+                        {plan.description}
+                      </p>
+                    </div>
+
+                    <div className="pt-4 mt-2 border-t border-sand-100">
+                      <Button
+                        size="sm"
+                        disabled={isCurrent || isUpgradingPlan !== null}
+                        onClick={() => handleUpgrade(t)}
+                        variant={isCurrent ? "outline" : "primary"}
+                        className={`w-full text-xs h-8 ${
+                          isCurrent
+                            ? "border-stone-300 text-stone-400 cursor-default"
+                            : "bg-kami-600 hover:bg-kami-700 text-white"
+                        }`}
+                      >
+                        {isUpgradingPlan === t
+                          ? "Laden..."
+                          : isCurrent
+                          ? "Actief"
+                          : `Kies ${t.charAt(0).toUpperCase() + t.slice(1)}`}
+                      </Button>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* 2. AUTOMATISERINGS- & ZEN REGELS */}
+      <Card>
+        <CardHeader>
+          <div className="flex items-center gap-3">
+            <div className="w-9 h-9 rounded-xl bg-kami-100 flex items-center justify-center text-kami-700">
+              <Sparkles className="w-5 h-5" />
+            </div>
+            <div>
+              <CardTitle>Automatiserings- &amp; Zen Regels</CardTitle>
+              <CardDescription>
+                Bepaal hoe KamiFlow facturen verwerkt en salonrust waarborgt.
+              </CardDescription>
+            </div>
+          </div>
+        </CardHeader>
+        <CardContent className="space-y-5">
+          <div className="divide-y divide-stone-100">
+            <div className="py-3.5 first:pt-0 last:pb-0 flex items-center justify-between gap-4">
+              <div className="pr-4">
+                <span className="text-sm font-semibold text-stone-900 block">
+                  Zet facturen zonder bijlage automatisch om naar een PDF
+                </span>
+                <span className="text-xs text-stone-500 block mt-0.5 leading-relaxed">
+                  E-mails zonder PDF-bijlage worden automatisch omgezet naar een nette PDF voor jouw boekhoudpakket.
+                </span>
+              </div>
+              <Switch
+                checked={zenRules.autoConvertToPdf}
+                onCheckedChange={(checked) =>
+                  setZenRules((prev) => ({ ...prev, autoConvertToPdf: checked }))
+                }
+                aria-label="Facturen zonder bijlage automatisch omzetten naar PDF"
+              />
+            </div>
+
+            <div className="py-3.5 first:pt-0 last:pb-0 flex items-center justify-between gap-4">
+              <div className="pr-4">
+                <span className="text-sm font-semibold text-stone-900 block">
+                  Slimme leveranciersherkenning
+                </span>
+                <span className="text-xs text-stone-500 block mt-0.5 leading-relaxed">
+                  Leert automatisch van jouw eerdere bevestigingen om facturen direct te herkennen.
+                </span>
+              </div>
+              <Switch
+                checked={zenRules.smartSupplierRecognition}
+                onCheckedChange={(checked) =>
+                  setZenRules((prev) => ({ ...prev, smartSupplierRecognition: checked }))
+                }
+                aria-label="Slimme leveranciersherkenning activeren"
+              />
+            </div>
+
+            <div className="py-3.5 first:pt-0 last:pb-0 flex items-center justify-between gap-4">
+              <div className="pr-4">
+                <span className="text-sm font-semibold text-stone-900 block">
+                  Zondagsrust &amp; Stille uren
+                </span>
+                <span className="text-xs text-stone-500 block mt-0.5 leading-relaxed">
+                  Facturen worden geruisloos verwerkt zonder meldingen in het weekend of op vrije dagen.
+                </span>
+              </div>
+              <Switch
+                checked={zenRules.sundayPeace}
+                onCheckedChange={(checked) =>
+                  setZenRules((prev) => ({ ...prev, sundayPeace: checked }))
+                }
+                aria-label="Zondagsrust inschakelen"
+              />
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* 3. FORMULIER BEDRIJFSGEGEVENS */}
+      <Card>
+        <CardHeader>
+          <div className="flex items-center gap-3">
+            <div className="w-9 h-9 rounded-xl bg-kami-100 flex items-center justify-center text-kami-700">
+              <Building className="w-5 h-5" />
+            </div>
+            <div>
+              <CardTitle>Bedrijfsgegevens</CardTitle>
+              <CardDescription>
+                Deze gegevens worden gebruikt voor factuurherkenning en de tenaamstelling van je abonnement.
+              </CardDescription>
+            </div>
+          </div>
+        </CardHeader>
+        <CardContent>
+          <form onSubmit={handleSaveProfile} className="space-y-4 max-w-xl">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-xs font-medium text-stone-700 mb-1">
+                  Voornaam
+                </label>
+                <Input
+                  value={formData.first_name}
+                  onChange={(e) => setFormData({ ...formData, first_name: e.target.value })}
+                  placeholder="Emma"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-medium text-stone-700 mb-1">
+                  Achternaam
+                </label>
+                <Input
+                  value={formData.last_name}
+                  onChange={(e) => setFormData({ ...formData, last_name: e.target.value })}
+                  placeholder="van Leeuwen"
+                />
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-xs font-medium text-stone-700 mb-1">
+                Bedrijfsnaam / Salon
+              </label>
+              <Input
+                value={formData.company_name}
+                onChange={(e) => setFormData({ ...formData, company_name: e.target.value })}
+                placeholder="Haarstudio & Spa Puur B.V."
+              />
+            </div>
+
+            <div>
+              <label className="block text-xs font-medium text-stone-700 mb-1">
+                Vestigingsadres
+              </label>
+              <Input
+                value={formData.company_address}
+                onChange={(e) => setFormData({ ...formData, company_address: e.target.value })}
+                placeholder="Prinsengracht 412, 1016 JB Amsterdam"
+              />
+            </div>
+
+            <div>
+              <label className="block text-xs font-medium text-stone-700 mb-1">
+                BTW-identificatienummer
+              </label>
+              <Input
+                value={formData.company_vat_number}
+                onChange={(e) => setFormData({ ...formData, company_vat_number: e.target.value })}
+                placeholder="NL861234567B01"
+              />
+            </div>
+
+            <div className="pt-2">
+              <Button
+                type="submit"
+                disabled={isSaving}
+                className="bg-kami-600 hover:bg-kami-700 text-white shadow-soft text-xs"
+              >
+                {isSaving ? "Opslaan..." : "Bedrijfsgegevens Opslaan"}
+              </Button>
+            </div>
+          </form>
+        </CardContent>
+      </Card>
+    </div>
+  );
+}

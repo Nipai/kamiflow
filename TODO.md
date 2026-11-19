@@ -9,101 +9,89 @@ In de MVP koppelt de gebruiker eenmalig zijn e-mail (Gmail of Outlook). Een acht
 
 ---
 
-## 2. Status van Current Task: Het statische geraamte (UI Shells) opmaken
+## 2. Status van Current Task: Supabase Schema Upgrade & Mollie Flow (Voltooid)
 
-- [x] **Requirement 1: Rustgevende Landing / Hero Page (`app/page.tsx`)**
-  - "Set & Forget" waardepropositie specifiek voor de beautybranche.
-  - Rustgevend design met accentkleur `#5c6d60`, washi-achtergrond, veel witruimte en zachte randen.
-  - Live flow simulatie: Periodieke check &rarr; Slimme PDF-handling (origineel vs. omgezet) &rarr; Upload-e-mail boekhouding.
-  - Voordelen voor salons, 3-stappenplan en praktijktestimonials van kapper-ondernemers.
-  - Getest en geverifieerd via geautomatiseerde tests.
-
-- [x] **Requirement 2: Statische Login UI (`app/login/page.tsx`)**
-  - Minimalistische, serene login interface met afgestemde typografie.
-  - Directe Google (Gmail) en Microsoft 365 (Outlook) authenticatieknoppen.
-  - E-mail & wachtwoord login met toggle voor magische inloglink (passwordless).
-  - Interactieve client validatie en soepele navigatie naar het dashboard.
-  - Getest en geverifieerd via geautomatiseerde tests.
-
-- [x] **Requirement 3: Dashboard Layout & Inbox Tabel (`app/dashboard/page.tsx` & `app/dashboard/layout.tsx`)**
-  - Rustgevende dashboard shell met zijbalk, mobiele navigatie, actieve salonstatus en realtime sync knop.
-  - 4 overzichtskaarten: Doorgestuurde facturen, Bespaarde administratietijd (~6.5 uur), Gekoppelde mailboxen en Aandacht vereist (Gemiste facturen).
-  - Zen Feed & Tabel met representatieve leveranciers uit de beautybranche (Davines, Keune, Nespresso, Salon Ambience, Zettle, L'Oréal).
-  - Duidelijke status of een document een originele PDF is of automatisch vanuit een e-mail is omgezet.
-  - Volledige functionaliteit om gemiste e-mails te openen in een review-modal en direct te markeren als factuur voor doorsturing naar het boekhoud-uploadadres.
-  - Zoekbalk en tab-filters (Alle e-mails, Aandacht vereist, Doorgestuurd).
-  - Getest en geverifieerd via geautomatiseerde tests.
-
-- [x] **Requirement 4: Statische Settings UI (`app/dashboard/settings/page.tsx`)**
-  - Beheer van gekoppelde Gmail- en Outlook-inboxen met status, check-frequentie en sync indicatoren.
-  - Boekhoudsoftware upload-mail koppeling (Moneybird, Exact Online, e-Boekhouden.nl, Yuki) met interactieve koppel/ontkoppel acties en zichtbaar uploadadres.
-  - Automatiserings- & zen-regels (drempelwaarde >90%, HTML-naar-PDF conversie toggle, twijfelgevallen signalering, zondagavond samenvatting).
-  - Salon profielbeheer met succesnotificaties bij opslaan.
-  - Getest en geverifieerd via geautomatiseerde tests.
-
----
-
-## 2.1 Fase 1: Merkidentiteit, Zen Stijl & Typografie Upgrade (Voltooid)
-- [x] Google Font `Cormorant Garamond` (high-end serif) gekoppeld voor koppen, logo en titels via `next/font/google`.
-- [x] Google Font `Plus Jakarta Sans` (serene sans-serif) gekoppeld voor bodytekst en interactieve componenten.
-- [x] `kami` groen `#5c6d60`, aangevuld met natuurlijke zand/rijstpapier tinten (`sand-50..900`) en warme messingaccenten (`brass-300..700`).
-- [x] Washi papiertexturen (`bg-washi`, `bg-paper-grid`) toegevoegd in `app/globals.css`.
-
-## 2.2 Fase 2: Hero Redesign & Asymmetrisch Tweeluik (Voltooid)
-- [x] Tactiele salon-factuurflow visueel gemaakt in `components/landing/hero-invoice-flow.tsx`.
-- [x] Monochrome leveranciers- en partnerstrip (`components/landing/brand-strip.tsx`) met herkenbare salonmerken (Keune, Davines, L'Oréal) en boekhoudpakketten.
-- [x] Asymmetrisch Bento-tweeluik (`components/landing/sunday-contrast.tsx`): Zondagavond zonder KamiFlow vs. Zondagavond mét KamiFlow.
-
-## 2.3 Fase 3: Dashboard & Zen Inbox Verfijning (Voltooid)
-- [x] Zen Barometer met "Alles is rustig in de salon" status en realtime meldingen.
-- [x] Zen Feed met esthetische washi-kaarten, leveranciers-monogrammen, categorieën en duidelijke upload-bestemmingen.
-- [x] View switcher toggle tussen Zen Feed en Klassiek Register.
-- [x] "Totale rust" serene zero-state bij een lege aandachts-inbox.
-
-## 2.4 Product Definitie & MVP Flow Uitlijning (Voltooid)
-- [x] **Afstemming met de werkelijke productmechaniek:**
-  - E-mail koppelen &rarr; periodiek scannen via ML/LLM op onderwerp (subject) en inhoud (body).
-  - Heeft de mail een PDF? &rarr; PDF direct doorsturen naar de upload-e-mail van de boekhouding.
-  - Geen PDF in de mail (HTML orderbon of afschrift)? &rarr; E-mail automatisch omzetten naar PDF en doorsturen naar de upload-e-mail.
-  - Uitdrukkelijk buiten MVP scope: XML/UBL 2.1 generatie en diepe factuurparsing (bedragen, regels); de boekhouding doet zelf de OCR via de upload-inbox.
-- [x] **Codebase & UI Componenten gelijkgetrokken:**
-  - `lib/types.ts` & `lib/mock-data.ts`: velden `pdfSource` (`attachment` vs `converted_from_email`), `uploadDestination`, en `matchReason` toegevoegd.
-  - `components/landing/hero-invoice-flow.tsx`: simulatie omgebouwd naar de werkelijke PDF-afhandeling (Keune PDF vs Nespresso omgezet van HTML naar PDF vs Davines PDF) en aflevering via het upload-adres.
-  - `components/landing/sunday-contrast.tsx`: teksten over HTML-mails en upload-mail aangescherpt.
-  - `components/dashboard/invoice-feed-card.tsx`: toont nu direct of het een originele PDF was of omgezet vanuit een e-mail, en het doel-uploadadres.
-  - `app/dashboard/page.tsx`: review modal en tabel aangepast met upload-adres en PDF-status in plaats van fictieve bedrag-parsing.
-  - `app/dashboard/settings/page.tsx`: upload-e-mailadres per boekhoudpakket inzichtelijk gemaakt en regel toegevoegd voor automatische HTML-naar-PDF conversie.
+- [x] **Database-schema & TypeScript Types (`lib/database.types.ts` & `lib/types.ts`)**
+  - Alle enums exact geïmplementeerd: `provider`, `subscription_status`, `plan_tier`, `checker`, `check_label`, `forward_status`.
+  - Tabellen getypeerd met Supabase v2 interfaces en relaties: `profiles`, `emailconnection`, `email`, `classification`.
+  - Oude typfouten zoals `clasification` en `company_adress` opgeschoond.
+- [x] **Supabase Client Architectuur in Next.js 14 App Router**
+  - `lib/supabase/client.ts`: Browser-client voor client components met veilige fallbacks.
+  - `lib/supabase/server.ts`: Server-client met `@supabase/ssr` en cookie-based authenticatie via `next/headers`.
+  - `lib/supabase/admin.ts`: Standalone service role client met `SUPABASE_SERVICE_ROLE_KEY` voor webhook-verwerking.
+- [x] **Route Group `app/(app)/` & Gedeelde Zen Dashboard Layout**
+  - Alle 4 ingelogde routes delen de Zen layout via `app/(app)/layout.tsx`:
+    - `/dashboard`: Overzicht & KPI-kaarten
+    - `/facturen`: Facturen Logboek & AI Inspectie
+    - `/koppelingen`: Mailboxen & Boekhoud-upload
+    - `/instellingen`: Bedrijfsgegevens & Mollie abonnement
+- [x] **Pagina 1: Dashboard (`/dashboard`)**
+  - Mailbox status indicatoren (`is_active` & `mailbox_last_sync`).
+  - KPI-kaarten gevoed door Supabase queries: doorgestuurd deze maand (`forward_status = 'forwarded'`), wachtend/mislukt (`forward_status in ('pending', 'failed')`) en abonnementstatus (`plan_tier` + `subscription_status`).
+  - Recente e-mails scan-widget (5 meest recente e-mails uit `email`).
+- [x] **Pagina 2: Facturen Logboek (`/facturen`) & ML Feedback**
+  - Overzichtstabel met datum, afzender, onderwerp, PDF-indicator (`pdf_flag`), forward status en meest recente AI/ML-classificatie.
+  - ML Feedback loop met interactieve modal: *"Markeer als factuur"* en *"Geen factuur"*.
+  - Schrijft direct naar `classification` met `source: 'user'`, `confidence: 1.0`, `model_version: 'user_manual'` en het gekozen oordeel (`verdict`), en update de e-mailstatus.
+- [x] **Pagina 3: Koppelingen (`/koppelingen`)**
+  - Overzicht van `emailconnection` rijen met toggle om `is_active` aan/uit te zetten en laatste synchronisatietijd.
+  - Formulier om `profiles.bookkeeping_upload_email` bij te werken met e-mailvalidatie en succesmelding.
+- [x] **Pagina 4: Instellingen & Abonnement (`/instellingen`)**
+  - Formulier voor salonbedrijfsgegevens (`company_name`, `company_address`, `company_vat_number`, `first_name`, `last_name`).
+  - Abonnementsoverzicht op basis van `plan_tier`, `subscription_status` en `current_period_end`.
+  - Upgrade-knoppen per plan tier direct gekoppeld aan de Mollie checkout route.
+- [x] **Mollie Subscriptions API Structuur**
+  - `lib/mollie.ts`: Mollie client setup via `MOLLIE_API_KEY` en definitie van plan pricing (`free`, `starter`, `pro`, `accountant`).
+  - `POST /api/mollie/checkout`: Maakt (of haalt) Mollie Customer op, slaat `mollie_customer_id` op in `profiles`, en start eerste betaling (`sequenceType: 'first'`) voor iDEAL/SEPA mandaat.
+  - `POST /api/webhooks/mollie`: Verwerkt webhook, haalt betaling op, voert idempotency-check uit tegen dubbele subscriptions (`profiles.mollie_subscription_id`), maakt bij geslaagde eerste betaling een Mollie Subscription aan en werkt Supabase profiel bij via service role.
 
 ---
 
 ## 3. Wat is zojuist voltooid?
-- De volledige productpropositie, typen, landingspagina, hero visualisatie, dashboard review flow, settings en mock-data zijn 100% uitgelijnd met de MVP:
-  1. Periodieke check op e-mails via ML/LLM (onderwerp + body).
-  2. Mails met PDF direct doorsturen naar het upload-e-mailadres van de boekhouding.
-  3. Mails zonder PDF (HTML facturen) automatisch omzetten naar PDF en doorsturen.
-  4. Geen verwarrende fictieve bedragparsing of XML in de MVP.
-- Documentatie in `kamiflow-task.md` en `TODO.md` actueel gemaakt.
+- Volledige overstap naar het nieuwe Supabase-schema (`profiles`, `emailconnection`, `email`, `classification`).
+- Mollie betalings- en subscription flow gebouwd inclusief webhook idempotency.
+- Gecentraliseerde `app/(app)/` route group zodat `/dashboard`, `/facturen`, `/koppelingen` en `/instellingen` dezelfde Zen Layout delen.
+- **Mobile-First UI/UX Polish & Vereenvoudiging:**
+  - Vaste Bottom Tab Bar op mobiel (`app/(app)/layout.tsx`) met safe-area padding voor iPhone en 4 duidelijke tabs (Overzicht, Facturen, Koppelingen, Instellingen).
+  - Compacte mobiele top-header (klein logo + sync-knop; welkomstbalk verborgen op mobiel).
+  - Compact 2x2 KPI grid op het dashboard (`/dashboard`) met behoud van de prominente Zen Barometer aandacht-kaart.
+  - Ultra-cleane factuurkaarten in `/facturen` (links: leverancier + datum; rechts: bedrag + zachte status-pil) met native-feeling Bottom Sheet op mobiel en gecentreerde modal op desktop.
+  - Twee grote duimvriendelijke knoppen in de sheet: *"Ja, is een factuur"* en *"Nee, geen factuur"*.
+  - Custom `<Switch />` component (`components/ui/Switch.tsx`) in kami-600 saliegroen met vloeiende animatie (ter vervanging van alle browser-checkboxes).
+  - Volledige revisie naar mensentaal i.p.v. vakjargon (*Slimme herkenning*, *Automatisch bijgehouden*, etc.).
+  - Technische bundeloptimalisatie: `PLAN_PRICING` verplaatst naar `lib/plans.ts` (bundelgrootte `/instellingen` gereduceerd van 150 kB naar 4.43 kB).
+- Alle 29 Vitest tests slagen en `next build` compileert 100% foutloos.
 
 ---
 
 ## 4. Welke bestanden zijn aangepast/aangemaakt?
-- `kamiflow-task.md`: MVP definitie en post-MVP scope geactualiseerd.
-- `lib/types.ts`: Uitgebreid met `pdfSource`, `uploadDestination` en `matchReason`.
-- `lib/mock-data.ts`: Geactualiseerd met realistische PDF-bronnen en uploadadressen.
-- `components/landing/hero-invoice-flow.tsx`: Hero visual herschreven naar PDF-handling en upload-mail route.
-- `components/landing/sunday-contrast.tsx`: Teksten verfijnd voor HTML-mail naar PDF conversie.
-- `app/page.tsx`: 3-stappenplan afgestemd op upload-mail en PDF conversie.
-- `components/dashboard/invoice-feed-card.tsx`: Badges en weergave voor originele PDF vs omgezet naar PDF.
-- `app/dashboard/page.tsx`: Modal preview en tabel bijgewerkt voor upload-bestemming en PDF-type.
-- `app/dashboard/settings/page.tsx`: Upload-e-mailadressen en HTML-naar-PDF conversie toggle toegevoegd.
-- `TODO.md`: Status en documentatie bijgewerkt.
+- `lib/database.types.ts`: Nieuw schema types voor Supabase v2.
+- `lib/types.ts`: Geüpdatet met database exports en helper types.
+- `lib/mock-data.ts`: Mock data uitgebreid met schema-conforme objecten en mensentaal.
+- `lib/plans.ts`: Standalone pakketprijzen zonder `@mollie/api-client`.
+- `lib/supabase/client.ts`: Browser-client voor client-side data ophalen.
+- `lib/supabase/server.ts`: Server-client met `@supabase/ssr` cookies.
+- `lib/supabase/admin.ts`: Supabase service role client voor webhook updates.
+- `lib/mollie.ts`: Mollie client initialisatie en re-export van plan pricing.
+- `components/ui/Switch.tsx`: Herbruikbaar custom toggle switch component.
+- `components/ui/modal.tsx`: Responsive modal & bottom sheet component.
+- `app/api/mollie/checkout/route.ts`: Checkout API endpoint voor Mollie betalingen.
+- `app/api/webhooks/mollie/route.ts`: Idempotente Mollie webhook endpoint.
+- `app/(app)/layout.tsx`: Gedeelde Zen Dashboard shell met mobiele Bottom Tab Bar.
+- `app/(app)/dashboard/page.tsx`: Vernieuwd dashboard met compact 2x2 KPI grid.
+- `app/(app)/facturen/page.tsx`: Ultra-cleane factuurkaarten met Bottom Sheet review flow.
+- `app/(app)/koppelingen/page.tsx`: Mailbox status management met Switch component.
+- `app/(app)/instellingen/page.tsx`: Bedrijfsgegevens en Zen Regels met Switch toggles en lichte bundel.
+- `__tests__/dashboard.test.tsx`: Aangepast op nieuwe route group import.
+- `__tests__/settings.test.tsx`: Getest op Koppelingen en Instellingen formulieren.
+- `__tests__/facturen.test.tsx`: Getest op ultra-cleane kaarten en Bottom Sheet flow.
+- `__tests__/mollie.test.ts`: Getest op Checkout en Webhook endpoints.
+- `package.json`: `@supabase/supabase-js`, `@supabase/ssr` en `@mollie/api-client` toegevoegd.
 
 ---
 
 ## 5. Logische volgende stap voor een volgende iteratie:
-1. **Authenticatie & Supabase integratie:**
-   - Supabase Auth inrichten voor Google OAuth (Gmail) & Microsoft 365 (Outlook).
-2. **Achtergrondtaak & E-mail connector (IMAP/Gmail API):**
-   - Periodieke cron of webhook voor inbox scanning.
-   - LLM/ML prompt & modelaanroep voor classificatie op subject + body.
-   - HTML-to-PDF rendering utility en SMTP forwarder naar de upload-e-mailadressen.
+1. **OAuth Mailbox Connectie (Gmail & Outlook):**
+   - OAuth flows toevoegen voor het daadwerkelijk autoriseren en opslaan van `provider_auth_token` en `provider_refresh_token` in `emailconnection`.
+2. **Achtergrond Worker / Cron:**
+   - Worker die periodiek inkomende e-mails ophaalt via IMAP/Gmail API, de classificatie-pipeline aanroept en PDF's forward naar `profiles.bookkeeping_upload_email`.

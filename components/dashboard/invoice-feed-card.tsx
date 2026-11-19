@@ -166,7 +166,7 @@ export function InvoiceFeedCard({
 
           <div className="hidden md:block border-l border-stone-200 pl-6">
             <span className="text-[11px] text-stone-400 block uppercase tracking-wider font-medium">
-              ML Herkenning
+              Slimme herkenning
             </span>
             <span className="inline-flex items-center gap-1 text-xs font-medium text-stone-700">
               <Sparkles className="w-3 h-3 text-kami-600" />

@@ -1,3 +1,17 @@
+export * from "./database.types";
+import {
+  Provider,
+  SubscriptionStatus,
+  PlanTier,
+  Checker,
+  CheckLabel,
+  ForwardStatus,
+  EmailRow,
+  ClassificationRow,
+  EmailConnectionRow,
+  ProfileRow,
+} from "./database.types";
+
 export type InvoiceStatus =
   | "forwarded"        // Automatisch herkend & doorgestuurd
   | "pending"          // In verwerking
@@ -39,7 +53,7 @@ export interface AccountingIntegration {
 
 export interface MailboxIntegration {
   id: string;
-  provider: "gmail" | "outlook";
+  provider: Provider;
   email: string;
   status: "connected" | "warning" | "disconnected";
   lastSync: string;
@@ -54,4 +68,9 @@ export interface SalonProfile {
   plan: string;
   accountingSoftware: string;
   defaultUploadEmail: string;
+}
+
+export interface EmailWithClassification extends EmailRow {
+  latest_classification?: ClassificationRow | null;
+  classifications?: ClassificationRow[];
 }

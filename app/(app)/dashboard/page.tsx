@@ -1,49 +1,129 @@
 "use client";
 
 import * as React from "react";
+import Link from "next/link";
 import {
   FileText,
   Clock,
   Mail,
   AlertCircle,
   Search,
-  CheckCircle2,
-  ArrowUpRight,
-  Filter,
   Check,
   Paperclip,
   CheckCheck,
   Sparkles,
   LayoutGrid,
   List,
+  CreditCard,
+  ArrowRight,
   ShieldCheck,
-  Receipt,
-  Download,
-  Building2,
 } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Modal } from "@/components/ui/modal";
-import { mockInvoices, mockDashboardStats, mockSalonProfile } from "@/lib/mock-data";
-import { InvoiceEmail, InvoiceStatus } from "@/lib/types";
-import { formatDate, formatCurrency } from "@/lib/utils";
+import { Switch } from "@/components/ui/Switch";
+import {
+  mockInvoices,
+  mockDashboardStats,
+  mockSalonProfile,
+  mockEmailConnections,
+  mockProfile,
+} from "@/lib/mock-data";
+import {
+  InvoiceEmail,
+  InvoiceStatus,
+  EmailConnectionRow,
+  ProfileRow,
+  EmailRow,
+} from "@/lib/types";
+import { formatDate } from "@/lib/utils";
 import { ZenBarometer } from "@/components/dashboard/zen-barometer";
 import { ZenEmptyState } from "@/components/dashboard/zen-empty-state";
 import { InvoiceFeedCard } from "@/components/dashboard/invoice-feed-card";
+import { createClient } from "@/lib/supabase/client";
 
 export default function DashboardPage() {
   const [invoices, setInvoices] = React.useState<InvoiceEmail[]>(mockInvoices);
   const [searchQuery, setSearchQuery] = React.useState("");
   const [selectedFilter, setSelectedFilter] = React.useState<"all" | "missed" | "forwarded">("all");
   const [viewMode, setViewMode] = React.useState<"feed" | "table">("feed");
-  
-  // Modal state for marking or previewing an invoice
+
+  // Real Supabase data states with initial fallbacks
+  const [emailConnections, setEmailConnections] = React.useState<EmailConnectionRow[]>(mockEmailConnections);
+  const [profile, setProfile] = React.useState<Partial<ProfileRow>>(mockProfile);
+  const [recentEmails, setRecentEmails] = React.useState<EmailRow[]>([]);
+  const [kpiCounts, setKpiCounts] = React.useState({
+    forwardedThisMonth: 28,
+    pendingOrFailedCount: 2,
+  });
+
+  // Modal state
   const [selectedForReview, setSelectedForReview] = React.useState<InvoiceEmail | null>(null);
   const [targetAccounting, setTargetAccounting] = React.useState("Moneybird (Inkoop)");
   const [rememberSender, setRememberSender] = React.useState(true);
   const [toastMessage, setToastMessage] = React.useState<string | null>(null);
+
+  // Fetch Supabase data
+  React.useEffect(() => {
+    async function fetchSupabaseData() {
+      try {
+        const supabase = createClient();
+
+        // 1. Mailbox connections
+        const { data: conns } = await supabase
+          .from("emailconnection")
+          .select("*");
+        if (conns && conns.length > 0) {
+          setEmailConnections(conns);
+        }
+
+        // 2. Profile (for plan_tier & subscription_status)
+        const { data: prof } = await supabase
+          .from("profiles")
+          .select("*")
+          .limit(1)
+          .single();
+        if (prof) {
+          setProfile(prof);
+        }
+
+        // 3. KPI counts: forwarded facturen
+        const { count: forwardedCount } = await supabase
+          .from("email")
+          .select("*", { count: "exact", head: true })
+          .eq("forward_status", "forwarded");
+
+        // KPI counts: pending of failed
+        const { count: pendingCount } = await supabase
+          .from("email")
+          .select("*", { count: "exact", head: true })
+          .in("forward_status", ["pending", "failed"]);
+
+        if (forwardedCount !== null || pendingCount !== null) {
+          setKpiCounts({
+            forwardedThisMonth: forwardedCount !== null && forwardedCount > 0 ? forwardedCount : 28,
+            pendingOrFailedCount: pendingCount !== null ? pendingCount : 2,
+          });
+        }
+
+        // 4. 5 meest recente e-mails uit `email`
+        const { data: latestEmails } = await supabase
+          .from("email")
+          .select("*")
+          .order("received_date", { ascending: false })
+          .limit(5);
+
+        if (latestEmails && latestEmails.length > 0) {
+          setRecentEmails(latestEmails);
+        }
+      } catch (err) {
+        // Fallback gracefully on local/mock data
+      }
+    }
+
+    fetchSupabaseData();
+  }, []);
 
   // Compute live stats based on state
   const missedCount = invoices.filter((inv) => inv.status === "missed").length;
@@ -51,15 +131,14 @@ export default function DashboardPage() {
     (inv) => inv.status === "forwarded" || inv.status === "manual_confirmed"
   ).length;
 
+  const activeMailboxCount = emailConnections.filter((m) => m.is_active).length;
+
   // Filtered invoices
   const filteredInvoices = invoices.filter((inv) => {
-    // Filter by tab
     if (selectedFilter === "missed" && inv.status !== "missed") return false;
     if (selectedFilter === "forwarded" && inv.status !== "forwarded" && inv.status !== "manual_confirmed") {
       return false;
     }
-
-    // Filter by search
     if (!searchQuery.trim()) return true;
     const q = searchQuery.toLowerCase();
     return (
@@ -108,18 +187,25 @@ export default function DashboardPage() {
             Overzicht &amp; Factuur Inbox
           </h1>
           <p className="text-sm text-stone-500 mt-1">
-            Realtime monitoring van inkomende e-mails en automatische boekhoudkoppelingen.
+            Automatisch bijgehouden inkomende e-mails, actieve mailboxen en automatische factuurherkenning.
           </p>
         </div>
-        <div className="flex items-center gap-2">
+
+        {/* Mailbox status badges */}
+        <div className="flex flex-wrap items-center gap-2">
           <Badge variant="info" className="px-3 py-1.5 text-xs font-normal bg-sand-100 text-stone-700 border-sand-200">
             <span className="w-2 h-2 rounded-full bg-emerald-500 mr-1.5 animate-pulse" />
-            2 mailboxen actief gemonitord
+            {activeMailboxCount} {activeMailboxCount === 1 ? "mailbox actief" : "mailboxen actief bijgehouden"}
           </Badge>
+          <Link href="/koppelingen">
+            <Button variant="outline" size="sm" className="text-xs h-7">
+              Beheer koppelingen
+            </Button>
+          </Link>
         </div>
       </div>
 
-      {/* ZEN STATUS BAROMETER ("ALLES IS RUSTIG" BANNER) */}
+      {/* ZEN STATUS BAROMETER (Prominente actiekaart bij twijfelgevallen) */}
       <ZenBarometer
         missedCount={missedCount}
         forwardedCount={forwardedCount + 24}
@@ -143,79 +229,80 @@ export default function DashboardPage() {
         </div>
       )}
 
-      {/* STATS OVERVIEW CARDS */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
-        {/* Card 1: Doorgestuurd */}
+      {/* STATS OVERVIEW CARDS (Compact 2x2 grid op mobiel, 4 cols op desktop) */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-5">
+        {/* Card 1: Doorgestuurd deze maand */}
         <Card className="hover:border-sand-300 transition-all duration-200 shadow-zen bg-white/90">
-          <CardContent className="p-5">
-            <div className="flex items-center justify-between">
-              <span className="text-xs font-medium text-stone-500">
+          <CardContent className="p-3.5 sm:p-5">
+            <div className="flex items-center justify-between gap-1">
+              <span className="text-[11px] sm:text-xs font-medium text-stone-500 truncate">
                 Doorgestuurd deze maand
               </span>
-              <div className="w-8 h-8 rounded-xl bg-sand-100 flex items-center justify-center text-kami-700">
-                <FileText className="w-4 h-4" />
+              <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg sm:rounded-xl bg-sand-100 flex items-center justify-center text-kami-700 shrink-0">
+                <FileText className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
               </div>
             </div>
-            <div className="mt-3">
-              <span className="font-serif text-3xl font-light text-stone-900">
+            <div className="mt-2 sm:mt-3">
+              <span className="font-serif text-2xl sm:text-3xl font-light text-stone-900">
                 {forwardedCount + 24}
               </span>
               <span className="text-xs text-stone-400 ml-1.5 font-normal">facturen</span>
             </div>
-            <p className="mt-1 text-xs text-stone-500">
-              Totaal bedrag: <span className="font-medium text-stone-700">€ 3.840,90</span>
+            <p className="mt-1 text-[11px] sm:text-xs text-stone-500 truncate">
+              Status: <span className="text-emerald-700 font-medium">Automatisch doorgestuurd</span>
             </p>
           </CardContent>
         </Card>
 
         {/* Card 2: Bespaarde Tijd */}
         <Card className="hover:border-sand-300 transition-all duration-200 shadow-zen bg-white/90">
-          <CardContent className="p-5">
-            <div className="flex items-center justify-between">
-              <span className="text-xs font-medium text-stone-500">
+          <CardContent className="p-3.5 sm:p-5">
+            <div className="flex items-center justify-between gap-1">
+              <span className="text-[11px] sm:text-xs font-medium text-stone-500 truncate">
                 Bespaarde administratietijd
               </span>
-              <div className="w-8 h-8 rounded-xl bg-sand-100 flex items-center justify-center text-kami-700">
-                <Clock className="w-4 h-4" />
+              <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg sm:rounded-xl bg-sand-100 flex items-center justify-center text-kami-700 shrink-0">
+                <Clock className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
               </div>
             </div>
-            <div className="mt-3">
-              <span className="font-serif text-3xl font-light text-stone-900">
+            <div className="mt-2 sm:mt-3">
+              <span className="font-serif text-2xl sm:text-3xl font-light text-stone-900">
                 ~{mockDashboardStats.hoursSaved}
               </span>
               <span className="text-xs text-stone-400 ml-1.5 font-normal">uur</span>
             </div>
-            <p className="mt-1 text-xs text-emerald-700 font-medium flex items-center gap-1">
-              <Sparkles className="w-3 h-3 text-emerald-600" />
-              Vrijgekomen voor salonklanten
+            <p className="mt-1 text-[11px] sm:text-xs text-emerald-700 font-medium flex items-center gap-1 truncate">
+              <Sparkles className="w-3 h-3 text-emerald-600 shrink-0" />
+              <span className="truncate">Vrij voor salonklanten</span>
             </p>
           </CardContent>
         </Card>
 
-        {/* Card 3: Mailboxen */}
+        {/* Card 3: Mailboxen & Status */}
         <Card className="hover:border-sand-300 transition-all duration-200 shadow-zen bg-white/90">
-          <CardContent className="p-5">
-            <div className="flex items-center justify-between">
-              <span className="text-xs font-medium text-stone-500">
+          <CardContent className="p-3.5 sm:p-5">
+            <div className="flex items-center justify-between gap-1">
+              <span className="text-[11px] sm:text-xs font-medium text-stone-500 truncate">
                 Gekoppelde mailboxen
               </span>
-              <div className="w-8 h-8 rounded-xl bg-sand-100 flex items-center justify-center text-stone-600">
-                <Mail className="w-4 h-4" />
+              <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg sm:rounded-xl bg-sand-100 flex items-center justify-center text-stone-600 shrink-0">
+                <Mail className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
               </div>
             </div>
-            <div className="mt-3">
-              <span className="font-serif text-3xl font-light text-stone-900">
-                {mockDashboardStats.connectedMailboxes}
+            <div className="mt-2 sm:mt-3">
+              <span className="font-serif text-2xl sm:text-3xl font-light text-stone-900">
+                {emailConnections.length || mockDashboardStats.connectedMailboxes}
               </span>
               <span className="text-xs text-stone-400 ml-1.5 font-normal">verbonden</span>
             </div>
-            <p className="mt-1 text-xs text-stone-500">
-              Gmail &amp; Outlook 365
-            </p>
+            <div className="mt-1 text-[11px] sm:text-xs text-stone-500 flex items-center gap-1.5 truncate">
+              <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${activeMailboxCount > 0 ? "bg-emerald-500" : "bg-stone-300"}`} />
+              <span className="truncate">{activeMailboxCount} actief • sync {emailConnections[0]?.mailbox_last_sync ? "recent" : "actief"}</span>
+            </div>
           </CardContent>
         </Card>
 
-        {/* Card 4: Aandacht Vereist (Gemiste items) */}
+        {/* Card 4: Aandacht Vereist / Wachtend */}
         <Card
           onClick={() => setSelectedFilter("missed")}
           className={`cursor-pointer transition-all duration-200 shadow-zen ${
@@ -224,35 +311,119 @@ export default function DashboardPage() {
               : "hover:border-sand-300 bg-white/90"
           }`}
         >
-          <CardContent className="p-5">
-            <div className="flex items-center justify-between">
-              <span className="text-xs font-medium text-stone-500">
+          <CardContent className="p-3.5 sm:p-5">
+            <div className="flex items-center justify-between gap-1">
+              <span className="text-[11px] sm:text-xs font-medium text-stone-500 truncate">
                 Aandacht vereist (Gemist)
               </span>
               <div
-                className={`w-8 h-8 rounded-xl flex items-center justify-center ${
+                className={`w-7 h-7 sm:w-8 sm:h-8 rounded-lg sm:rounded-xl flex items-center justify-center shrink-0 ${
                   missedCount > 0
                     ? "bg-amber-100 text-amber-700"
                     : "bg-emerald-100 text-emerald-700"
                 }`}
               >
-                <AlertCircle className="w-4 h-4" />
+                <AlertCircle className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
               </div>
             </div>
-            <div className="mt-3">
-              <span className="font-serif text-3xl font-light text-stone-900">
-                {missedCount}
-              </span>
-              <span className="text-xs text-stone-400 ml-1.5 font-normal">
-                {missedCount === 1 ? "e-mail" : "e-mails"}
-              </span>
+            <div className="mt-2 sm:mt-3 flex items-baseline justify-between">
+              <div>
+                <span className="font-serif text-2xl sm:text-3xl font-light text-stone-900">
+                  {missedCount}
+                </span>
+                <span className="text-xs text-stone-400 ml-1.5 font-normal">
+                  {missedCount === 1 ? "e-mail" : "e-mails"}
+                </span>
+              </div>
+              <Badge variant="info" className="text-[9px] sm:text-[10px] uppercase font-mono tracking-wider">
+                {profile.plan_tier || "pro"}
+              </Badge>
             </div>
-            <p className="mt-1 text-xs text-amber-700 font-medium">
-              {missedCount > 0 ? "Klik om te controleren" : "Alles is bijgewerkt!"}
+            <p className="mt-1 text-[11px] sm:text-xs text-amber-700 font-medium truncate">
+              {missedCount > 0 ? "Tik om te checken" : "Alles is bijgewerkt!"}
             </p>
           </CardContent>
         </Card>
       </div>
+
+      {/* RECENT EMAILS BANNER (5 meest recente e-mails uit `email`) */}
+      {recentEmails.length > 0 && (
+        <div className="p-5 rounded-3xl bg-white border border-sand-200 shadow-zen space-y-3">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Mail className="w-4 h-4 text-kami-600" />
+              <h3 className="text-xs font-semibold text-stone-800 uppercase tracking-wider">
+                Recente e-mailactiviteit (Laatste 5 scans)
+              </h3>
+            </div>
+            <Link
+              href="/facturen"
+              className="text-xs text-kami-700 hover:text-kami-800 font-medium flex items-center gap-1"
+            >
+              <span>Bekijk compleet logboek</span>
+              <ArrowRight className="w-3 h-3" />
+            </Link>
+          </div>
+
+          <div className="divide-y divide-stone-100 text-xs">
+            {recentEmails.map((item) => {
+              const subject = item.subject || "Geen onderwerp";
+              const sender = item.sender || "Onbekende afzender";
+              const date = item.received_date;
+              const status = item.forward_status;
+              const hasPdf = item.pdf_flag;
+
+              return (
+                <div
+                  key={item.id}
+                  className="py-2.5 flex items-center justify-between gap-3 first:pt-1 last:pb-0"
+                >
+                  <div className="flex items-center gap-2.5 min-w-0">
+                    <span
+                      className={`w-2 h-2 rounded-full shrink-0 ${
+                        status === "forwarded"
+                          ? "bg-emerald-500"
+                          : status === "failed"
+                          ? "bg-rose-500"
+                          : "bg-amber-400"
+                      }`}
+                    />
+                    <div className="truncate">
+                      <span className="font-medium text-stone-800 mr-2">{sender.split("<")[0].trim()}</span>
+                      <span className="text-stone-500 truncate">{subject}</span>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-3 shrink-0 text-stone-400">
+                    {hasPdf ? (
+                      <span className="inline-flex items-center gap-1 text-[11px] text-stone-600 bg-sand-100 px-2 py-0.5 rounded">
+                        <Paperclip className="w-3 h-3 text-kami-600" /> PDF
+                      </span>
+                    ) : (
+                      <span className="text-[10px] text-amber-700 bg-amber-50 px-1.5 py-0.5 rounded">
+                        HTML
+                      </span>
+                    )}
+                    <span className="hidden sm:inline text-[11px]">{formatDate(date)}</span>
+                    <Badge
+                      variant={
+                        status === "forwarded"
+                          ? "success"
+                          : status === "failed"
+                          ? "danger"
+                          : "warning"
+                      }
+                      className="text-[10px] py-0 px-2"
+                    >
+                      {status}
+                    </Badge>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
 
       {/* INBOX SECTION: CONTROLS & CONTENT */}
       <div className="space-y-4">
@@ -299,7 +470,6 @@ export default function DashboardPage() {
 
           {/* Right: Search Box & View Mode Toggle */}
           <div className="flex items-center gap-3">
-            {/* Search Box */}
             <div className="relative w-full sm:w-64">
               <Search className="w-4 h-4 text-stone-400 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
               <input
@@ -311,7 +481,6 @@ export default function DashboardPage() {
               />
             </div>
 
-            {/* View Mode Switcher */}
             <div className="hidden sm:flex items-center bg-sand-100/80 p-1 rounded-xl">
               <button
                 onClick={() => setViewMode("feed")}
@@ -349,7 +518,6 @@ export default function DashboardPage() {
             accountingSoftware={mockSalonProfile.accountingSoftware}
           />
         ) : viewMode === "feed" ? (
-          /* ZEN CARD FEED */
           <div className="space-y-3.5">
             {filteredInvoices.map((inv) => (
               <InvoiceFeedCard
@@ -364,7 +532,6 @@ export default function DashboardPage() {
             </div>
           </div>
         ) : (
-          /* TRADITIONAL / CLEAN TABLE VIEW */
           <div className="bg-white rounded-3xl border border-sand-200/90 shadow-zen overflow-hidden">
             <div className="overflow-x-auto">
               <table className="w-full text-left text-sm" role="table">
@@ -374,7 +541,6 @@ export default function DashboardPage() {
                     <th className="py-3.5 px-6">Leverancier</th>
                     <th className="py-3.5 px-6">Onderwerp &amp; Bijlage</th>
                     <th className="py-3.5 px-6">Categorie</th>
-                    <th className="py-3.5 px-6">Bedrag</th>
                     <th className="py-3.5 px-6">Datum</th>
                     <th className="py-3.5 px-6 text-right">Actie</th>
                   </tr>
@@ -387,7 +553,6 @@ export default function DashboardPage() {
                         inv.status === "missed" ? "bg-amber-50/30" : ""
                       }`}
                     >
-                      {/* Status Badge */}
                       <td className="py-4 px-6 whitespace-nowrap">
                         {inv.status === "forwarded" && (
                           <Badge variant="success">
@@ -412,7 +577,6 @@ export default function DashboardPage() {
                         )}
                       </td>
 
-                      {/* Sender */}
                       <td className="py-4 px-6">
                         <div className="font-medium text-stone-900 truncate max-w-[180px]">
                           {inv.sender}
@@ -422,7 +586,6 @@ export default function DashboardPage() {
                         </div>
                       </td>
 
-                      {/* Subject & Attachment */}
                       <td className="py-4 px-6 max-w-xs">
                         <div className="font-medium text-stone-800 truncate" title={inv.subject}>
                           {inv.subject}
@@ -435,31 +598,16 @@ export default function DashboardPage() {
                         )}
                       </td>
 
-                      {/* Category */}
                       <td className="py-4 px-6 whitespace-nowrap">
                         <span className="inline-block px-2.5 py-0.5 rounded-lg bg-stone-100 text-stone-600 text-xs font-normal">
                           {inv.category || "Algemeen"}
                         </span>
                       </td>
 
-                      {/* Amount */}
-                      <td className="py-4 px-6 whitespace-nowrap">
-                        <span className="font-medium text-stone-900">
-                          {inv.amount ? formatCurrency(inv.amount) : "—"}
-                        </span>
-                        {inv.invoiceNumber && (
-                          <div className="text-[11px] text-stone-400 font-mono">
-                            {inv.invoiceNumber}
-                          </div>
-                        )}
-                      </td>
-
-                      {/* Date */}
                       <td className="py-4 px-6 whitespace-nowrap text-xs text-stone-500">
                         {formatDate(inv.receivedAt)}
                       </td>
 
-                      {/* Action */}
                       <td className="py-4 px-6 whitespace-nowrap text-right">
                         {inv.status === "missed" ? (
                           <Button
@@ -486,7 +634,6 @@ export default function DashboardPage() {
               </table>
             </div>
 
-            {/* Footer info in Table */}
             <div className="p-4 bg-sand-50/50 border-t border-sand-200/80 flex items-center justify-between text-xs text-stone-500">
               <span>Weergave van {filteredInvoices.length} e-mails</span>
               <span className="italic">
@@ -514,7 +661,6 @@ export default function DashboardPage() {
       >
         {selectedForReview && (
           <div className="space-y-5">
-            {/* Review Card in Washi Style */}
             <div className="p-4 sm:p-5 rounded-2xl bg-sand-50/70 border border-sand-200 space-y-3.5">
               <div className="flex items-start justify-between gap-3">
                 <div>
@@ -576,15 +722,14 @@ export default function DashboardPage() {
                 </div>
               </div>
 
-              {/* Confidence Meter & Match Reason */}
               <div className="pt-2 border-t border-sand-200/60 space-y-1 text-xs text-stone-500">
                 <div className="flex items-center justify-between">
                   <span className="inline-flex items-center gap-1 text-[11px]">
                     <Sparkles className="w-3.5 h-3.5 text-kami-600" />
-                    ML/LLM Herkenning (Onderwerp &amp; Body)
+                    Slimme herkenning (Onderwerp &amp; Bericht)
                   </span>
                   <span className="font-semibold text-stone-800">
-                    {selectedForReview.confidenceScore}% match
+                    {selectedForReview.confidenceScore}% zekerheid
                   </span>
                 </div>
                 {selectedForReview.matchReason && (
@@ -597,7 +742,6 @@ export default function DashboardPage() {
 
             {selectedForReview.status === "missed" ? (
               <>
-                {/* Target Select */}
                 <div>
                   <label className="block text-xs font-medium text-stone-700 mb-1.5">
                     Doorsturen naar boekhouding
@@ -614,22 +758,19 @@ export default function DashboardPage() {
                   </select>
                 </div>
 
-                {/* Learn sender checkbox */}
-                <div className="flex items-start gap-2.5 pt-1">
-                  <input
+                <div className="flex items-start gap-3 pt-1">
+                  <Switch
                     id="remember"
-                    type="checkbox"
                     checked={rememberSender}
-                    onChange={(e) => setRememberSender(e.target.checked)}
-                    className="mt-0.5 rounded border-sand-300 text-kami-600 focus:ring-kami-500"
+                    onCheckedChange={(val) => setRememberSender(val)}
+                    aria-label={`Onthoud ${selectedForReview.sender}`}
                   />
-                  <label htmlFor="remember" className="text-xs text-stone-600 leading-normal">
+                  <label htmlFor="remember" className="text-xs text-stone-600 leading-normal cursor-pointer select-none">
                     Onthoud <strong>{selectedForReview.sender}</strong> als vaste salonleverancier
                     zodat toekomstige facturen automatisch doorgestuurd worden.
                   </label>
                 </div>
 
-                {/* Buttons */}
                 <div className="pt-3 flex items-center justify-end gap-3 border-t border-stone-100">
                   <Button
                     variant="outline"
@@ -650,7 +791,6 @@ export default function DashboardPage() {
                 </div>
               </>
             ) : (
-              /* Already forwarded details */
               <div className="space-y-4 pt-1">
                 <div className="p-3 rounded-xl bg-emerald-50 border border-emerald-200 text-xs text-emerald-900 flex items-center justify-between">
                   <div className="flex items-center gap-2">

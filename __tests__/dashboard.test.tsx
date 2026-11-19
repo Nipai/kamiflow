@@ -1,6 +1,6 @@
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import { describe, it, expect } from "vitest";
-import DashboardPage from "@/app/dashboard/page";
+import DashboardPage from "@/app/(app)/dashboard/page";
 
 describe("Dashboard & Inbox Page (Requirement 3)", () => {
   it("renders key stats cards for the salon", () => {

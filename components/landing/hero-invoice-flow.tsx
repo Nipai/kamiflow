@@ -49,7 +49,7 @@ const FLOW_DEMOS: FlowDemo[] = [
     pdfFileName: "Keune_Factuur_99301.pdf",
     pdfHandlingNote: "Originele PDF bijlage gedetecteerd",
     mlConfidence: 98,
-    mlMatchDetails: "ML herkent factuurkenmerken in onderwerp & e-mail body",
+    mlMatchDetails: "Slimme herkenning van factuurkenmerken in onderwerp & bericht",
     uploadEmailDest: "haarstudiopuur@moneybird.com",
     accountingSoftware: "Moneybird",
     timeSaved: "6 min bespaard",
@@ -64,9 +64,9 @@ const FLOW_DEMOS: FlowDemo[] = [
     emailSnippet: "Geachte klant, hartelijk dank voor uw bestelling. Uw besteloverzicht en betalingsspecificatie staan hieronder in deze mail vermeld.",
     hasPdfOriginal: false,
     pdfFileName: "Nespresso_Bestelling_SalonPuur.pdf",
-    pdfHandlingNote: "Geen PDF in mail → KamiFlow zet HTML-mail automatisch om naar PDF",
+    pdfHandlingNote: "Zet facturen zonder bijlage automatisch om naar een PDF",
     mlConfidence: 94,
-    mlMatchDetails: "LLM detecteert salon inkoopbon in HTML body zonder bijlage",
+    mlMatchDetails: "Automatisch herkend als salon inkoopbon zonder bijlage",
     uploadEmailDest: "haarstudiopuur@moneybird.com",
     accountingSoftware: "Moneybird",
     timeSaved: "10 min bespaard (nooit meer printen naar PDF)",
@@ -83,7 +83,7 @@ const FLOW_DEMOS: FlowDemo[] = [
     pdfFileName: "Factuur_DAV-2026-8812.pdf",
     pdfHandlingNote: "Originele PDF bijlage gedetecteerd",
     mlConfidence: 99,
-    mlMatchDetails: "ML matching op afzender, onderwerp en PDF-factuurstructuur",
+    mlMatchDetails: "Automatisch herkend op basis van afzender, onderwerp en factuurstructuur",
     uploadEmailDest: "inkoop@exactonline.nl",
     accountingSoftware: "Exact Online",
     timeSaved: "5 min bespaard",
@@ -168,9 +168,9 @@ export function HeroInvoiceFlow() {
             <div className="mt-4 pt-3 border-t border-sand-200/60 flex items-center justify-between text-xs text-stone-600">
               <span className="inline-flex items-center gap-1 text-[11px] text-stone-500">
                 <Sparkles className="w-3 h-3 text-kami-600" />
-                ML/LLM Herkenning
+                Slimme herkenning
               </span>
-              <span className="font-semibold text-kami-700">{current.mlConfidence}% match</span>
+              <span className="font-semibold text-kami-700">{current.mlConfidence}% zekerheid</span>
             </div>
           </div>
 
@@ -188,7 +188,7 @@ export function HeroInvoiceFlow() {
               <p className="text-[11px] text-kami-800 mt-1 leading-snug">
                 {current.hasPdfOriginal
                   ? "Originele PDF bijlage direct geselecteerd"
-                  : "HTML e-mail automatisch omgezet naar PDF!"}
+                  : "Zet facturen zonder bijlage automatisch om naar een PDF"}
               </p>
             </div>
 
@@ -253,7 +253,7 @@ export function HeroInvoiceFlow() {
               <span className="font-medium tracking-wide">
                 {current.hasPdfOriginal
                   ? `PDF Bijlage doorgestuurd naar ${current.uploadEmailDest}`
-                  : `HTML E-mail omgezet naar PDF & doorgestuurd naar ${current.uploadEmailDest}`}
+                  : `Zet facturen zonder bijlage automatisch om naar een PDF & doorgestuurd naar ${current.uploadEmailDest}`}
               </span>
             </div>
 

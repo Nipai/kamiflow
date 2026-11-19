@@ -16,6 +16,7 @@ services:
       - coolify.managed=true
       - coolify.name=kamiflow
       - coolify.applicationId=3
+      - coolify.applicationUuid=mvdu08j2m4ymps8rhvewebbz
 
 networks:
   coolify:
