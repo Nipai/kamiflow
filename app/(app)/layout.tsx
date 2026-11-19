@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import {
   Sparkles,
   Inbox,
@@ -22,6 +22,7 @@ export default function AppLayout({
   children: React.ReactNode;
 }) {
   const pathname = usePathname();
+  const router = useRouter();
   const [isSyncing, setIsSyncing] = React.useState(false);
   const [syncNotice, setSyncNotice] = React.useState<string | null>(null);
   const [profile, setProfile] = React.useState({
@@ -34,11 +35,19 @@ export default function AppLayout({
     async function loadProfile() {
       try {
         const supabase = createClient();
-        const { data, error } = await supabase
+        const {
+          data: { user },
+        } = await supabase.auth.getUser();
+
+        let query = supabase
           .from("profiles")
-          .select("company_name, first_name, last_name, bookkeeping_upload_email")
-          .limit(1)
-          .single();
+          .select("company_name, first_name, last_name, bookkeeping_upload_email");
+
+        if (user) {
+          query = query.eq("uuid_user", user.id);
+        }
+
+        const { data, error } = await query.limit(1).maybeSingle();
 
         if (!error && data) {
           setProfile({
@@ -53,6 +62,17 @@ export default function AppLayout({
     }
     loadProfile();
   }, []);
+
+  const handleLogout = async () => {
+    try {
+      const supabase = createClient();
+      await supabase.auth.signOut();
+    } catch (err) {
+      console.error("Sign out error:", err);
+    } finally {
+      router.push("/login");
+    }
+  };
 
   const navItems = [
     {
@@ -166,13 +186,14 @@ export default function AppLayout({
             </span>
           </div>
 
-          <Link
-            href="/"
-            className="flex items-center gap-2 text-stone-500 hover:text-rose-600 transition pt-2"
+          <button
+            type="button"
+            onClick={handleLogout}
+            className="flex items-center gap-2 text-stone-500 hover:text-rose-600 transition pt-2 text-xs w-full text-left cursor-pointer"
           >
             <LogOut className="w-4 h-4" />
             <span>Uitloggen</span>
-          </Link>
+          </button>
         </div>
       </aside>
 

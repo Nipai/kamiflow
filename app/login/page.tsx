@@ -3,33 +3,159 @@
 import * as React from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Sparkles, Mail, Lock, ArrowRight, ShieldCheck, CheckCircle2 } from "lucide-react";
+import { Sparkles, Mail, Lock, ArrowRight, ShieldCheck, CheckCircle2, AlertCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { createClient } from "@/lib/supabase/client";
 
-export default function LoginPage() {
+interface LoginPageProps {
+  initialMode?: "login" | "signup";
+}
+
+export default function LoginPage({ initialMode = "login" }: LoginPageProps) {
   const router = useRouter();
+  const [authMode, setAuthMode] = React.useState<"login" | "signup">(initialMode);
+
   const [email, setEmail] = React.useState("emma@haarstudiopuur.nl");
   const [password, setPassword] = React.useState("••••••••••••");
+  const [salonName, setSalonName] = React.useState("");
+
   const [isLoading, setIsLoading] = React.useState(false);
   const [useMagicLink, setUseMagicLink] = React.useState(false);
   const [magicLinkSent, setMagicLinkSent] = React.useState(false);
+  const [signUpSent, setSignUpSent] = React.useState(false);
+  const [errorMessage, setErrorMessage] = React.useState<string | null>(null);
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
+  // Check query parameter for mode (e.g. ?mode=signup) or callback error
+  React.useEffect(() => {
+    if (typeof window !== "undefined") {
+      const params = new URLSearchParams(window.location.search);
+      const modeParam = params.get("mode");
+      if (modeParam === "signup") {
+        setAuthMode("signup");
+      }
+      const errorParam = params.get("error");
+      if (errorParam === "auth_callback_failed") {
+        setErrorMessage("Het inloggen via de link is verlopen of mislukt. Probeer het opnieuw.");
+      }
+    }
+  }, []);
+
+  const isSupabaseConfigured = () => {
+    const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+    return Boolean(url && !url.includes("placeholder"));
+  };
+
+  const handleOAuthLogin = async (provider: "google" | "azure") => {
     setIsLoading(true);
+    setErrorMessage(null);
 
-    if (useMagicLink) {
-      setTimeout(() => {
-        setIsLoading(false);
-        setMagicLinkSent(true);
-      }, 600);
-    } else {
-      // Direct navigation to dashboard (mock UI)
+    if (!isSupabaseConfigured()) {
       setTimeout(() => {
         setIsLoading(false);
         router.push("/dashboard");
-      }, 500);
+      }, 300);
+      return;
+    }
+
+    try {
+      const supabase = createClient();
+      const origin = typeof window !== "undefined" ? window.location.origin : "";
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider,
+        options: {
+          redirectTo: `${origin}/api/auth/callback`,
+        },
+      });
+      if (error) throw error;
+    } catch (err: any) {
+      console.error("OAuth login error:", err);
+      setErrorMessage(err.message || "Inloggen via externe provider is mislukt.");
+      setIsLoading(false);
+    }
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsLoading(true);
+    setErrorMessage(null);
+
+    // If running without Supabase backend (e.g. tests or build)
+    if (!isSupabaseConfigured()) {
+      if (useMagicLink) {
+        setTimeout(() => {
+          setIsLoading(false);
+          setMagicLinkSent(true);
+        }, 500);
+      } else {
+        setTimeout(() => {
+          setIsLoading(false);
+          router.push("/dashboard");
+        }, 500);
+      }
+      return;
+    }
+
+    try {
+      const supabase = createClient();
+      const origin = typeof window !== "undefined" ? window.location.origin : "";
+
+      if (authMode === "signup") {
+        const { data, error } = await supabase.auth.signUp({
+          email: email.trim(),
+          password,
+          options: {
+            emailRedirectTo: `${origin}/api/auth/callback`,
+            data: {
+              company_name: salonName.trim() || undefined,
+            },
+          },
+        });
+
+        if (error) throw error;
+
+        if (data.session) {
+          router.push("/dashboard");
+          router.refresh();
+        } else {
+          setSignUpSent(true);
+        }
+      } else {
+        // Inloggen
+        if (useMagicLink) {
+          const { error } = await supabase.auth.signInWithOtp({
+            email: email.trim(),
+            options: {
+              emailRedirectTo: `${origin}/api/auth/callback`,
+            },
+          });
+          if (error) throw error;
+          setMagicLinkSent(true);
+        } else {
+          const { data, error } = await supabase.auth.signInWithPassword({
+            email: email.trim(),
+            password,
+          });
+
+          if (error) {
+            // Friendly error message in Dutch
+            if (error.message.includes("Invalid login credentials")) {
+              throw new Error("Onjuist e-mailadres of wachtwoord. Controleer je gegevens.");
+            }
+            throw error;
+          }
+
+          if (data.session) {
+            router.push("/dashboard");
+            router.refresh();
+          }
+        }
+      }
+    } catch (err: any) {
+      console.error("Auth submit error:", err);
+      setErrorMessage(err.message || "Er is een fout opgetreden bij het verwerken van je inlog.");
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -51,15 +177,58 @@ export default function LoginPage() {
           </span>
         </Link>
         <h2 className="font-serif mt-6 text-2xl font-light text-stone-900 tracking-tight sm:text-3xl">
-          Welkom terug in de rust
+          {authMode === "signup" ? "Start met salonrust" : "Welkom terug in de rust"}
         </h2>
         <p className="mt-2 text-sm text-stone-500">
-          Beheer je salon facturen en koppelingen zonder stress
+          {authMode === "signup"
+            ? "Maak direct je account aan en ontkoppel administratieve stress"
+            : "Beheer je salon facturen en koppelingen zonder stress"}
         </p>
       </div>
 
       <div className="mt-8 sm:mx-auto sm:w-full sm:max-w-md">
         <div className="bg-white/90 backdrop-blur-sm py-8 px-6 sm:px-10 shadow-card rounded-3xl border border-stone-200/80">
+          {/* TAB SELECTOR: INLOGGEN / REGISTREREN */}
+          <div className="flex rounded-xl bg-stone-100/80 p-1 mb-6 text-xs font-medium">
+            <button
+              type="button"
+              onClick={() => {
+                setAuthMode("login");
+                setErrorMessage(null);
+              }}
+              className={`flex-1 py-2 text-center rounded-lg transition-all ${
+                authMode === "login"
+                  ? "bg-white text-stone-900 shadow-subtle font-semibold"
+                  : "text-stone-500 hover:text-stone-800"
+              }`}
+            >
+              Inloggen
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setAuthMode("signup");
+                setUseMagicLink(false);
+                setErrorMessage(null);
+              }}
+              className={`flex-1 py-2 text-center rounded-lg transition-all ${
+                authMode === "signup"
+                  ? "bg-white text-stone-900 shadow-subtle font-semibold"
+                  : "text-stone-500 hover:text-stone-800"
+              }`}
+            >
+              Registreren
+            </button>
+          </div>
+
+          {/* ERROR ALERT */}
+          {errorMessage && (
+            <div className="mb-5 p-3.5 rounded-2xl bg-rose-50 border border-rose-200 text-rose-800 flex items-start gap-2.5 text-xs animate-in fade-in">
+              <AlertCircle className="w-4 h-4 text-rose-600 shrink-0 mt-0.5" />
+              <div className="leading-relaxed">{errorMessage}</div>
+            </div>
+          )}
+
           {magicLinkSent ? (
             <div className="text-center py-6 space-y-4">
               <div className="w-12 h-12 bg-emerald-50 text-emerald-600 rounded-full flex items-center justify-center mx-auto border border-emerald-200">
@@ -85,14 +254,36 @@ export default function LoginPage() {
                 Opnieuw inloggen
               </button>
             </div>
+          ) : signUpSent ? (
+            <div className="text-center py-6 space-y-4">
+              <div className="w-12 h-12 bg-emerald-50 text-emerald-600 rounded-full flex items-center justify-center mx-auto border border-emerald-200">
+                <CheckCircle2 className="w-6 h-6" />
+              </div>
+              <h3 className="text-lg font-medium text-stone-900">Bijna klaar!</h3>
+              <p className="text-sm text-stone-600">
+                We hebben een bevestigingsmail gestuurd naar <strong className="font-semibold">{email}</strong>. Klik op de link in de e-mail om je account te activeren.
+              </p>
+              <div className="pt-2">
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    setSignUpSent(false);
+                    setAuthMode("login");
+                  }}
+                  className="w-full text-xs"
+                >
+                  Terug naar inloggen
+                </Button>
+              </div>
+            </div>
           ) : (
             <>
               {/* Quick OAuth options */}
               <div className="space-y-3">
                 <button
                   type="button"
-                  onClick={() => router.push("/dashboard")}
-                  className="w-full flex items-center justify-center gap-3 px-4 py-2.5 border border-stone-200 rounded-xl bg-stone-50/50 hover:bg-stone-50 text-stone-700 text-sm font-medium transition shadow-subtle"
+                  onClick={() => handleOAuthLogin("google")}
+                  className="w-full flex items-center justify-center gap-3 px-4 py-2.5 border border-stone-200 rounded-xl bg-stone-50/50 hover:bg-stone-50 text-stone-700 text-sm font-medium transition shadow-subtle cursor-pointer"
                 >
                   <svg className="w-4 h-4" viewBox="0 0 24 24">
                     <path
@@ -117,8 +308,8 @@ export default function LoginPage() {
 
                 <button
                   type="button"
-                  onClick={() => router.push("/dashboard")}
-                  className="w-full flex items-center justify-center gap-3 px-4 py-2.5 border border-stone-200 rounded-xl bg-stone-50/50 hover:bg-stone-50 text-stone-700 text-sm font-medium transition shadow-subtle"
+                  onClick={() => handleOAuthLogin("azure")}
+                  className="w-full flex items-center justify-center gap-3 px-4 py-2.5 border border-stone-200 rounded-xl bg-stone-50/50 hover:bg-stone-50 text-stone-700 text-sm font-medium transition shadow-subtle cursor-pointer"
                 >
                   <svg className="w-4 h-4" viewBox="0 0 23 23">
                     <path fill="#f35325" d="M1 1h10v10H1z" />
@@ -142,6 +333,18 @@ export default function LoginPage() {
               </div>
 
               <form onSubmit={handleSubmit} className="space-y-4">
+                {authMode === "signup" && (
+                  <div>
+                    <Input
+                      label="Salonnaam / Bedrijfsnaam"
+                      type="text"
+                      value={salonName}
+                      onChange={(e) => setSalonName(e.target.value)}
+                      placeholder="Haarstudio Puur"
+                    />
+                  </div>
+                )}
+
                 <div>
                   <Input
                     label="Zakelijk e-mailadres"
@@ -159,13 +362,15 @@ export default function LoginPage() {
                       <label className="text-xs font-medium text-stone-700">
                         Wachtwoord
                       </label>
-                      <button
-                        type="button"
-                        onClick={() => setUseMagicLink(true)}
-                        className="text-xs text-kami-700 hover:underline"
-                      >
-                        Inloggen zonder wachtwoord?
-                      </button>
+                      {authMode === "login" && (
+                        <button
+                          type="button"
+                          onClick={() => setUseMagicLink(true)}
+                          className="text-xs text-kami-700 hover:underline"
+                        >
+                          Inloggen zonder wachtwoord?
+                        </button>
+                      )}
                     </div>
                     <Input
                       type="password"
@@ -173,6 +378,7 @@ export default function LoginPage() {
                       onChange={(e) => setPassword(e.target.value)}
                       placeholder="••••••••••••"
                       required
+                      minLength={authMode === "signup" ? 6 : undefined}
                     />
                   </div>
                 )}
@@ -184,9 +390,14 @@ export default function LoginPage() {
                     disabled={isLoading}
                   >
                     {isLoading ? (
-                      "Bezig met inloggen..."
+                      authMode === "signup" ? "Account aanmaken..." : "Bezig met inloggen..."
                     ) : useMagicLink ? (
                       "Stuur mij een magische inloglink"
+                    ) : authMode === "signup" ? (
+                      <>
+                        Gratis account registreren
+                        <ArrowRight className="w-4 h-4 ml-1.5" />
+                      </>
                     ) : (
                       <>
                         Naar Salon Dashboard
@@ -197,7 +408,7 @@ export default function LoginPage() {
                 </div>
               </form>
 
-              {useMagicLink && (
+              {useMagicLink && authMode === "login" && (
                 <div className="mt-3 text-center">
                   <button
                     type="button"
@@ -218,13 +429,29 @@ export default function LoginPage() {
         </div>
 
         <p className="mt-6 text-center text-xs text-stone-500">
-          Nog geen KamiFlow account?{" "}
-          <Link
-            href="/"
-            className="font-medium text-kami-700 hover:underline"
-          >
-            Start je gratis proefperiode
-          </Link>
+          {authMode === "signup" ? (
+            <>
+              Heb je al een account?{" "}
+              <button
+                type="button"
+                onClick={() => setAuthMode("login")}
+                className="font-medium text-kami-700 hover:underline"
+              >
+                Inloggen
+              </button>
+            </>
+          ) : (
+            <>
+              Nog geen KamiFlow account?{" "}
+              <button
+                type="button"
+                onClick={() => setAuthMode("signup")}
+                className="font-medium text-kami-700 hover:underline"
+              >
+                Start je gratis proefperiode
+              </button>
+            </>
+          )}
         </p>
       </div>
     </div>

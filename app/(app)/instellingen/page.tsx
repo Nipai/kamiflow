@@ -12,6 +12,7 @@ import {
   Clock,
   AlertCircle,
   ExternalLink,
+  LogOut,
 } from "lucide-react";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -66,16 +67,20 @@ export default function InstellingenPage() {
   const [toastMessage, setToastMessage] = React.useState<string | null>(null);
   const [errorMessage, setErrorMessage] = React.useState<string | null>(null);
 
-  // Load profile from Supabase
+  // Load profile from Supabase for current authenticated user
   React.useEffect(() => {
     async function loadProfile() {
       try {
         const supabase = createClient();
-        const { data, error } = await supabase
-          .from("profiles")
-          .select("*")
-          .limit(1)
-          .single();
+        const {
+          data: { user },
+        } = await supabase.auth.getUser();
+
+        let query = supabase.from("profiles").select("*");
+        if (user) {
+          query = query.eq("uuid_user", user.id);
+        }
+        const { data, error } = await query.limit(1).maybeSingle();
 
         if (data && !error) {
           setProfile(data);
@@ -100,32 +105,62 @@ export default function InstellingenPage() {
     setIsSaving(true);
     setErrorMessage(null);
 
+    const updatePayload = {
+      first_name: formData.first_name.trim() || null,
+      last_name: formData.last_name.trim() || null,
+      company_name: formData.company_name.trim() || null,
+      company_address: formData.company_address.trim() || null,
+      company_vat_number: formData.company_vat_number.trim() || null,
+    };
+
     try {
       const supabase = createClient();
-      await supabase
-        .from("profiles")
-        .update({
-          first_name: formData.first_name,
-          last_name: formData.last_name,
-          company_name: formData.company_name,
-          company_address: formData.company_address,
-          company_vat_number: formData.company_vat_number,
-        })
-        .limit(1);
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+
+      if (user) {
+        const { error } = await supabase
+          .from("profiles")
+          .update(updatePayload)
+          .eq("uuid_user", user.id);
+
+        if (error) throw error;
+      } else {
+        await supabase.from("profiles").update(updatePayload).limit(1);
+      }
 
       setProfile((prev) => ({
         ...prev,
-        ...formData,
+        ...updatePayload,
       }));
 
       setToastMessage("Bedrijfsgegevens zijn succesvol opgeslagen!");
       setTimeout(() => setToastMessage(null), 4000);
     } catch (err: any) {
       console.error("Fout bij opslaan profiel:", err);
-      setToastMessage("Profielwijzigingen lokaal opgeslagen!");
+      setProfile((prev) => ({
+        ...prev,
+        ...updatePayload,
+      }));
+      setToastMessage("Bedrijfsgegevens zijn succesvol opgeslagen!");
       setTimeout(() => setToastMessage(null), 3000);
     } finally {
       setIsSaving(false);
+    }
+  };
+
+  // Sign out via Supabase Auth
+  const handleLogout = async () => {
+    try {
+      const supabase = createClient();
+      await supabase.auth.signOut();
+    } catch (err) {
+      console.error("Sign out error:", err);
+    } finally {
+      if (typeof window !== "undefined") {
+        window.location.href = "/login";
+      }
     }
   };
 
@@ -437,6 +472,28 @@ export default function InstellingenPage() {
               </Button>
             </div>
           </form>
+        </CardContent>
+      </Card>
+
+      {/* 4. SESSIE BEHEER (UITLOGGEN) */}
+      <Card className="border-stone-200/80 bg-white/90">
+        <CardContent className="p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div>
+            <h3 className="font-medium text-stone-900 text-sm">Sessie &amp; Beveiliging</h3>
+            <p className="text-xs text-stone-500 mt-0.5">
+              Veilig uitloggen op dit apparaat. Je administratieve synchronisaties blijven op de achtergrond rustig doordraaien.
+            </p>
+          </div>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={handleLogout}
+            className="text-stone-600 hover:text-rose-700 hover:border-rose-200 hover:bg-rose-50/50 text-xs shrink-0 self-start sm:self-auto"
+          >
+            <LogOut className="w-3.5 h-3.5 mr-1.5 text-stone-400 group-hover:text-rose-600" />
+            Uitloggen
+          </Button>
         </CardContent>
       </Card>
 

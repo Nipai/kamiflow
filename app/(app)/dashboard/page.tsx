@@ -62,58 +62,90 @@ export default function DashboardPage() {
   const [rememberSender, setRememberSender] = React.useState(true);
   const [toastMessage, setToastMessage] = React.useState<string | null>(null);
 
-  // Fetch Supabase data
+  // Fetch Supabase data for authenticated user
   React.useEffect(() => {
     async function fetchSupabaseData() {
       try {
         const supabase = createClient();
+        const {
+          data: { user },
+        } = await supabase.auth.getUser();
 
-        // 1. Mailbox connections
-        const { data: conns } = await supabase
-          .from("emailconnection")
-          .select("*");
-        if (conns && conns.length > 0) {
-          setEmailConnections(conns);
-        }
+        if (user) {
+          // 1. Mailbox connections for this user
+          const { data: conns } = await supabase
+            .from("emailconnection")
+            .select("*")
+            .eq("user_id", user.id)
+            .order("id");
+          if (conns) {
+            setEmailConnections(conns);
+          }
 
-        // 2. Profile (for plan_tier & subscription_status)
-        const { data: prof } = await supabase
-          .from("profiles")
-          .select("*")
-          .limit(1)
-          .single();
-        if (prof) {
-          setProfile(prof);
-        }
+          // 2. Profile for this user
+          const { data: prof } = await supabase
+            .from("profiles")
+            .select("*")
+            .eq("uuid_user", user.id)
+            .maybeSingle();
+          if (prof) {
+            setProfile(prof);
+          }
 
-        // 3. KPI counts: forwarded facturen
-        const { count: forwardedCount } = await supabase
-          .from("email")
-          .select("*", { count: "exact", head: true })
-          .eq("forward_status", "forwarded");
+          // 3. User's emails and classifications
+          const { data: emailRows } = await supabase
+            .from("email")
+            .select("*")
+            .order("received_date", { ascending: false });
 
-        // KPI counts: pending of failed
-        const { count: pendingCount } = await supabase
-          .from("email")
-          .select("*", { count: "exact", head: true })
-          .in("forward_status", ["pending", "failed"]);
+          const { data: classRows } = await supabase
+            .from("classification")
+            .select("*")
+            .order("created_at", { ascending: false });
 
-        if (forwardedCount !== null || pendingCount !== null) {
-          setKpiCounts({
-            forwardedThisMonth: forwardedCount !== null && forwardedCount > 0 ? forwardedCount : 28,
-            pendingOrFailedCount: pendingCount !== null ? pendingCount : 2,
-          });
-        }
+          if (emailRows) {
+            const mappedInvoices: InvoiceEmail[] = emailRows.map((e) => {
+              const latestClass = (classRows || []).find((c) => c.email_id === e.id);
+              const isManual = latestClass?.source === "user";
+              const rawSender = e.sender || "Onbekende afzender";
+              const senderName = rawSender.split("<")[0].trim() || rawSender;
+              const senderEmail = rawSender.includes("<")
+                ? rawSender.substring(rawSender.indexOf("<") + 1, rawSender.indexOf(">"))
+                : rawSender;
 
-        // 4. 5 meest recente e-mails uit `email`
-        const { data: latestEmails } = await supabase
-          .from("email")
-          .select("*")
-          .order("received_date", { ascending: false })
-          .limit(5);
+              let status: InvoiceStatus = "pending";
+              if (e.forward_status === "forwarded") {
+                status = isManual ? "manual_confirmed" : "forwarded";
+              } else if (e.forward_status === "skipped") {
+                status = "pending";
+              } else {
+                status = "missed";
+              }
 
-        if (latestEmails && latestEmails.length > 0) {
-          setRecentEmails(latestEmails);
+              const attachmentName = e.attachment_path
+                ? e.attachment_path.split("/").pop()!
+                : e.pdf_flag
+                ? "Factuur_bijlage.pdf"
+                : "Factuur_omgezet.pdf";
+
+              return {
+                id: e.id,
+                sender: senderName,
+                senderEmail,
+                subject: e.subject || "Geen onderwerp",
+                snippet: e.body ? e.body.slice(0, 140) : "",
+                receivedAt: e.received_date,
+                status,
+                uploadDestination: prof?.bookkeeping_upload_email || "Moneybird",
+                attachmentName,
+                pdfSource: e.pdf_flag ? "attachment" : "converted_from_email",
+                confidenceScore: latestClass ? Math.round(latestClass.confidence * 100) : 95,
+                category: "Algemeen",
+              };
+            });
+
+            setInvoices(mappedInvoices);
+          }
         }
       } catch (err) {
         // Fallback gracefully on local/mock data
@@ -130,6 +162,7 @@ export default function DashboardPage() {
   ).length;
 
   const activeMailboxCount = emailConnections.filter((m) => m.is_active).length;
+  const hoursSaved = (forwardedCount * 5 / 60).toFixed(1);
 
   // Filtered invoices
   const filteredInvoices = invoices.filter((inv) => {
@@ -155,12 +188,35 @@ export default function DashboardPage() {
     setSelectedForReview(invoice);
   };
 
-  const handleConfirmMarkAsInvoice = () => {
+  const handleConfirmMarkAsInvoice = async () => {
     if (!selectedForReview) return;
+    const targetId = selectedForReview.id;
+    const sender = selectedForReview.sender;
+
+    try {
+      const supabase = createClient();
+      await supabase.from("classification").insert({
+        email_id: targetId,
+        source: "user",
+        verdict: "invoice",
+        confidence: 1.0,
+        model_version: "user_manual",
+      });
+
+      await supabase
+        .from("email")
+        .update({
+          forward_status: "forwarded",
+          forwarded_at: new Date().toISOString(),
+        })
+        .eq("id", targetId);
+    } catch (err) {
+      console.error("Fout bij opslaan classification:", err);
+    }
 
     setInvoices((prev) =>
       prev.map((item) =>
-        item.id === selectedForReview.id
+        item.id === targetId
           ? {
               ...item,
               status: "manual_confirmed" as InvoiceStatus,
@@ -170,18 +226,39 @@ export default function DashboardPage() {
       )
     );
 
-    const sender = selectedForReview.sender;
     setSelectedForReview(null);
     setToastMessage(`"${sender}" is gemarkeerd als factuur en doorgestuurd naar ${targetAccounting}!`);
     setTimeout(() => setToastMessage(null), 4000);
   };
 
-  const handleRejectInvoice = () => {
+  const handleRejectInvoice = async () => {
     if (!selectedForReview) return;
+    const targetId = selectedForReview.id;
+    const sender = selectedForReview.sender;
+
+    try {
+      const supabase = createClient();
+      await supabase.from("classification").insert({
+        email_id: targetId,
+        source: "user",
+        verdict: "not_invoice",
+        confidence: 1.0,
+        model_version: "user_manual",
+      });
+
+      await supabase
+        .from("email")
+        .update({
+          forward_status: "skipped",
+        })
+        .eq("id", targetId);
+    } catch (err) {
+      console.error("Fout bij opslaan classification:", err);
+    }
 
     setInvoices((prev) =>
       prev.map((item) =>
-        item.id === selectedForReview.id
+        item.id === targetId
           ? {
               ...item,
               status: "pending" as InvoiceStatus,
@@ -190,7 +267,6 @@ export default function DashboardPage() {
       )
     );
 
-    const sender = selectedForReview.sender;
     setSelectedForReview(null);
     setToastMessage(`"${sender}" is gemarkeerd als geen factuur.`);
     setTimeout(() => setToastMessage(null), 4000);
@@ -226,7 +302,7 @@ export default function DashboardPage() {
       {/* ZEN STATUS BAROMETER (Prominente actiekaart bij twijfelgevallen) */}
       <ZenBarometer
         missedCount={missedCount}
-        forwardedCount={forwardedCount + 24}
+        forwardedCount={forwardedCount}
         onFilterMissed={() => setSelectedFilter("missed")}
         accountingSoftware={mockSalonProfile.accountingSoftware}
       />
@@ -262,7 +338,7 @@ export default function DashboardPage() {
             </div>
             <div className="mt-2 sm:mt-3">
               <span className="font-serif text-2xl sm:text-3xl font-light text-stone-900">
-                {forwardedCount + 24}
+                {forwardedCount}
               </span>
               <span className="text-xs text-stone-400 ml-1.5 font-normal">facturen</span>
             </div>
@@ -285,7 +361,7 @@ export default function DashboardPage() {
             </div>
             <div className="mt-2 sm:mt-3">
               <span className="font-serif text-2xl sm:text-3xl font-light text-stone-900">
-                ~{mockDashboardStats.hoursSaved}
+                ~{hoursSaved}
               </span>
               <span className="text-xs text-stone-400 ml-1.5 font-normal">uur</span>
             </div>
@@ -428,7 +504,27 @@ export default function DashboardPage() {
         </div>
 
         {/* ULTRA-CLEANE COMPACTE FACTUURKAARTEN (MAX 4) */}
-        {filteredInvoices.length === 0 ? (
+        {invoices.length === 0 ? (
+          <div className="py-16 px-6 text-center bg-white/80 rounded-3xl border border-sand-200/90 shadow-zen my-4">
+            <div className="w-14 h-14 rounded-2xl bg-sand-100 flex items-center justify-center text-kami-700 mx-auto mb-4">
+              <FileText className="w-7 h-7" />
+            </div>
+            <h3 className="font-serif text-xl text-stone-900 font-medium">
+              Nog geen facturen ontvangen
+            </h3>
+            <p className="text-xs sm:text-sm text-stone-500 mt-1.5 max-w-md mx-auto leading-relaxed">
+              Koppel eerst je mailbox om KamiFlow automatisch facturen te laten verzamelen en verwerken.
+            </p>
+            <div className="mt-6 flex justify-center">
+              <Link href="/koppelingen">
+                <Button className="bg-kami-600 hover:bg-kami-700 text-white shadow-soft text-xs">
+                  <Mail className="w-3.5 h-3.5 mr-1.5" />
+                  Koppel je mailbox
+                </Button>
+              </Link>
+            </div>
+          </div>
+        ) : filteredInvoices.length === 0 ? (
           <ZenEmptyState
             isMissedFilter={selectedFilter === "missed"}
             searchQuery={searchQuery}

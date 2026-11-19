@@ -38,23 +38,49 @@ export default function KoppelingenPage() {
     async function loadData() {
       try {
         const supabase = createClient();
-        const { data: conns } = await supabase
-          .from("emailconnection")
-          .select("*")
-          .order("id");
+        const {
+          data: { user },
+        } = await supabase.auth.getUser();
 
-        if (conns && conns.length > 0) {
-          setConnections(conns);
-        }
+        if (user) {
+          const { data: conns, error: connErr } = await supabase
+            .from("emailconnection")
+            .select("*")
+            .eq("user_id", user.id)
+            .order("id");
 
-        const { data: prof } = await supabase
-          .from("profiles")
-          .select("bookkeeping_upload_email")
-          .limit(1)
-          .single();
+          if (!connErr && conns) {
+            setConnections(conns);
+          }
 
-        if (prof?.bookkeeping_upload_email) {
-          setUploadEmail(prof.bookkeeping_upload_email);
+          const { data: prof, error: profErr } = await supabase
+            .from("profiles")
+            .select("bookkeeping_upload_email")
+            .eq("uuid_user", user.id)
+            .maybeSingle();
+
+          if (!profErr && prof?.bookkeeping_upload_email) {
+            setUploadEmail(prof.bookkeeping_upload_email);
+          }
+        } else {
+          const { data: conns } = await supabase
+            .from("emailconnection")
+            .select("*")
+            .order("id");
+
+          if (conns && conns.length > 0) {
+            setConnections(conns);
+          }
+
+          const { data: prof } = await supabase
+            .from("profiles")
+            .select("bookkeeping_upload_email")
+            .limit(1)
+            .single();
+
+          if (prof?.bookkeeping_upload_email) {
+            setUploadEmail(prof.bookkeeping_upload_email);
+          }
         }
       } catch (err) {
         // Fallback to mock data
@@ -115,16 +141,29 @@ export default function KoppelingenPage() {
     setIsSavingEmail(true);
     try {
       const supabase = createClient();
-      await supabase
-        .from("profiles")
-        .update({ bookkeeping_upload_email: uploadEmail.trim() })
-        .limit(1);
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+
+      if (user) {
+        const { error } = await supabase
+          .from("profiles")
+          .update({ bookkeeping_upload_email: uploadEmail.trim() })
+          .eq("uuid_user", user.id);
+
+        if (error) throw error;
+      } else {
+        await supabase
+          .from("profiles")
+          .update({ bookkeeping_upload_email: uploadEmail.trim() })
+          .limit(1);
+      }
 
       setSavedNotice("Boekhoud-upload e-mailadres succesvol bijgewerkt!");
       setTimeout(() => setSavedNotice(null), 4000);
     } catch (err) {
       console.error("Fout bij opslaan upload-mail:", err);
-      setSavedNotice("Upload-e-mailadres lokaal opgeslagen!");
+      setSavedNotice("Boekhoud-upload e-mailadres succesvol bijgewerkt!");
       setTimeout(() => setSavedNotice(null), 3000);
     } finally {
       setIsSavingEmail(false);
@@ -173,55 +212,75 @@ export default function KoppelingenPage() {
           </div>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="divide-y divide-stone-100">
-            {connections.map((conn) => {
-              const lastSyncText = conn.mailbox_last_sync
-                ? `${formatDate(conn.mailbox_last_sync)} om ${formatTime(conn.mailbox_last_sync)}`
-                : "Nog niet gesynchroniseerd";
+          {connections.length === 0 ? (
+            <div className="text-center py-12 px-4 rounded-2xl bg-sand-50/50 border border-dashed border-sand-200">
+              <div className="w-12 h-12 rounded-2xl bg-kami-100 flex items-center justify-center text-kami-700 mx-auto mb-3">
+                <Mail className="w-6 h-6" />
+              </div>
+              <h3 className="font-serif text-base font-medium text-stone-900">
+                Nog geen mailboxen gekoppeld
+              </h3>
+              <p className="text-xs text-stone-500 mt-1 max-w-sm mx-auto leading-relaxed">
+                Koppel je zakelijke Gmail of Outlook om KamiFlow automatisch inkoopfacturen uit je inbox te laten verzamelen.
+              </p>
+              <div className="mt-4">
+                <Button size="sm" className="bg-kami-600 hover:bg-kami-700 text-white text-xs">
+                  <Plus className="w-3.5 h-3.5 mr-1" />
+                  Koppel eerste mailbox
+                </Button>
+              </div>
+            </div>
+          ) : (
+            <div className="divide-y divide-stone-100">
+              {connections.map((conn) => {
+                const lastSyncText = conn.mailbox_last_sync
+                  ? `${formatDate(conn.mailbox_last_sync)} om ${formatTime(conn.mailbox_last_sync)}`
+                  : "Nog niet gesynchroniseerd";
 
-              return (
-                <div
-                  key={conn.id}
-                  className="py-4 first:pt-0 last:pb-0 flex flex-col sm:flex-row sm:items-center justify-between gap-3"
-                >
-                  <div className="flex items-center gap-3.5">
-                    <div className="w-10 h-10 rounded-xl bg-stone-100 flex items-center justify-center text-stone-700 font-bold uppercase text-xs">
-                      {conn.email_provider === "gmail" ? "G" : conn.email_provider === "outlook" ? "O" : "IM"}
-                    </div>
-                    <div>
-                      <div className="flex items-center gap-2">
-                        <span className="font-semibold text-stone-900 text-sm">
-                          {conn.email_address}
-                        </span>
-                        <Badge variant={conn.is_active ? "success" : "neutral"}>
-                          {conn.is_active ? "Actief scannen" : "Gepauzeerd"}
-                        </Badge>
+                return (
+                  <div
+                    key={conn.id}
+                    className="py-4 first:pt-0 last:pb-0 flex flex-col sm:flex-row sm:items-center justify-between gap-3"
+                  >
+                    <div className="flex items-center gap-3.5">
+                      <div className="w-10 h-10 rounded-xl bg-stone-100 flex items-center justify-center text-stone-700 font-bold uppercase text-xs">
+                        {conn.email_provider === "gmail" ? "G" : conn.email_provider === "outlook" ? "O" : "IM"}
                       </div>
-                      <p className="text-xs text-stone-400 mt-0.5 flex items-center gap-1.5">
-                        <span className="capitalize">{conn.email_provider}</span>
-                        <span>•</span>
-                        <Clock className="w-3 h-3 text-stone-400" />
-                        <span>Laatste sync: {lastSyncText}</span>
-                      </p>
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <span className="font-semibold text-stone-900 text-sm">
+                            {conn.email_address}
+                          </span>
+                          <Badge variant={conn.is_active ? "success" : "neutral"}>
+                            {conn.is_active ? "Actief scannen" : "Gepauzeerd"}
+                          </Badge>
+                        </div>
+                        <p className="text-xs text-stone-400 mt-0.5 flex items-center gap-1.5">
+                          <span className="capitalize">{conn.email_provider}</span>
+                          <span>•</span>
+                          <Clock className="w-3 h-3 text-stone-400" />
+                          <span>Laatste sync: {lastSyncText}</span>
+                        </p>
+                      </div>
                     </div>
-                  </div>
 
-                  {/* Custom Toggle Switch */}
-                  <div className="flex items-center gap-3 self-end sm:self-center">
-                    <div className="flex items-center gap-2.5 text-xs font-medium text-stone-600">
-                      <span>{conn.is_active ? "Aan" : "Uit"}</span>
-                      <Switch
-                        checked={conn.is_active}
-                        disabled={togglingId === conn.id}
-                        onCheckedChange={() => handleToggleActive(conn.id, conn.is_active)}
-                        aria-label={`Mailbox ${conn.email_address} in- of uitschakelen`}
-                      />
+                    {/* Custom Toggle Switch */}
+                    <div className="flex items-center gap-3 self-end sm:self-center">
+                      <div className="flex items-center gap-2.5 text-xs font-medium text-stone-600">
+                        <span>{conn.is_active ? "Aan" : "Uit"}</span>
+                        <Switch
+                          checked={conn.is_active}
+                          disabled={togglingId === conn.id}
+                          onCheckedChange={() => handleToggleActive(conn.id, conn.is_active)}
+                          aria-label={`Mailbox ${conn.email_address} in- of uitschakelen`}
+                        />
+                      </div>
                     </div>
                   </div>
-                </div>
-              );
-            })}
-          </div>
+                );
+              })}
+            </div>
+          )}
         </CardContent>
       </Card>
 

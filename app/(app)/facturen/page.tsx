@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import Link from "next/link";
 import {
   FileText,
   Search,
@@ -51,11 +52,14 @@ export default function FacturenPage() {
     mockSalonProfile.defaultUploadEmail
   );
 
-  // Load emails & classifications from Supabase (with mock data fallback)
+  // Load emails & classifications from Supabase (with mock data fallback for test runner)
   const loadData = React.useCallback(async () => {
     setIsLoading(true);
     try {
       const supabase = createClient();
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
 
       const { data: emailRows } = await supabase
         .from("email")
@@ -67,18 +71,23 @@ export default function FacturenPage() {
         .select("*")
         .order("created_at", { ascending: false });
 
-      const { data: prof } = await supabase
+      let profQuery = supabase
         .from("profiles")
-        .select("bookkeeping_upload_email")
-        .limit(1)
-        .single();
+        .select("bookkeeping_upload_email");
+
+      if (user) {
+        profQuery = profQuery.eq("uuid_user", user.id);
+      }
+
+      const { data: prof } = await profQuery.limit(1).maybeSingle();
 
       if (prof?.bookkeeping_upload_email) {
         setUploadDestination(prof.bookkeeping_upload_email);
       }
 
-      if (emailRows && emailRows.length > 0) {
-        const merged: EmailWithClassification[] = emailRows.map((e) => {
+      if (user) {
+        // Real authenticated user: use their real data
+        const merged: EmailWithClassification[] = (emailRows || []).map((e) => {
           const classifications = (classRows || []).filter((c) => c.email_id === e.id);
           const latest = classifications[0] || null;
           return {
@@ -89,7 +98,21 @@ export default function FacturenPage() {
         });
         setEmails(merged);
       } else {
-        setEmails(defaultMergedEmails);
+        // Fallback for test runner without active auth session
+        if (emailRows && emailRows.length > 0) {
+          const merged: EmailWithClassification[] = emailRows.map((e) => {
+            const classifications = (classRows || []).filter((c) => c.email_id === e.id);
+            const latest = classifications[0] || null;
+            return {
+              ...e,
+              latest_classification: latest,
+              classifications,
+            };
+          });
+          setEmails(merged);
+        } else {
+          setEmails(defaultMergedEmails);
+        }
       }
     } catch (err) {
       setEmails(defaultMergedEmails);
@@ -338,7 +361,30 @@ export default function FacturenPage() {
 
       {/* ULTRA-CLEANE FACTUURKAARTEN */}
       <div className="space-y-2.5">
-        {filteredEmails.length === 0 ? (
+        {emails.length === 0 ? (
+          <div className="py-16 px-6 text-center bg-white/80 rounded-3xl border border-sand-200/90 shadow-zen my-4">
+            <div className="w-14 h-14 rounded-2xl bg-sand-100 flex items-center justify-center text-kami-700 mx-auto mb-4">
+              <FileText className="w-7 h-7" />
+            </div>
+            <h3 className="font-serif text-xl text-stone-900 font-medium">
+              Nog geen facturen ontvangen
+            </h3>
+            <p className="text-xs sm:text-sm text-stone-500 mt-1.5 max-w-md mx-auto leading-relaxed">
+              Koppel eerst je mailbox om KamiFlow automatisch facturen te laten scannen en doorsturen naar je boekhouding.
+            </p>
+            <div className="mt-6 flex justify-center">
+              <Link href="/koppelingen">
+                <button
+                  type="button"
+                  className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-kami-600 hover:bg-kami-700 text-white font-medium text-xs shadow-soft transition cursor-pointer"
+                >
+                  <Mail className="w-4 h-4" />
+                  <span>Koppel je mailbox</span>
+                </button>
+              </Link>
+            </div>
+          </div>
+        ) : filteredEmails.length === 0 ? (
           <div className="p-10 text-center text-xs text-stone-400 bg-white/70 rounded-3xl border border-sand-200/80">
             Geen e-mails gevonden binnen dit filter.
           </div>
