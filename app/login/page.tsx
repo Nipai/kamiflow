@@ -16,8 +16,8 @@ export default function LoginPage({ initialMode = "login" }: LoginPageProps) {
   const router = useRouter();
   const [authMode, setAuthMode] = React.useState<"login" | "signup">(initialMode);
 
-  const [email, setEmail] = React.useState("emma@haarstudiopuur.nl");
-  const [password, setPassword] = React.useState("••••••••••••");
+  const [email, setEmail] = React.useState("");
+  const [password, setPassword] = React.useState("");
   const [salonName, setSalonName] = React.useState("");
 
   const [isLoading, setIsLoading] = React.useState(false);
@@ -338,7 +338,7 @@ export default function LoginPage({ initialMode = "login" }: LoginPageProps) {
                     <Input
                       label="Salonnaam / Bedrijfsnaam"
                       type="text"
-                      value=
+                      value={salonName}
                       onChange={(e) => setSalonName(e.target.value)}
                       placeholder="Haarstudio Puur"
                     />
@@ -349,7 +349,7 @@ export default function LoginPage({ initialMode = "login" }: LoginPageProps) {
                   <Input
                     label="Zakelijk e-mailadres"
                     type="email"
-                    value=
+                    value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     placeholder="naam@jouwsalon.nl"
                     required
@@ -374,7 +374,7 @@ export default function LoginPage({ initialMode = "login" }: LoginPageProps) {
                     </div>
                     <Input
                       type="password"
-                      value=
+                      value={password}
                       onChange={(e) => setPassword(e.target.value)}
                       placeholder="••••••••••••"
                       required
