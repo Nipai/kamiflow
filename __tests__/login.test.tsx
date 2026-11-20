@@ -7,6 +7,30 @@ const pushMock = vi.fn();
 vi.mock("next/navigation", () => ({
   useRouter: () => ({
     push: pushMock,
+    refresh: vi.fn(),
+  }),
+}));
+
+vi.mock("@/lib/supabase/client", () => ({
+  createClient: () => ({
+    auth: {
+      signInWithPassword: vi.fn().mockResolvedValue({
+        data: { session: { user: { id: "test-user" } } },
+        error: null,
+      }),
+      signInWithOtp: vi.fn().mockResolvedValue({
+        data: {},
+        error: null,
+      }),
+      signInWithOAuth: vi.fn().mockResolvedValue({
+        data: {},
+        error: null,
+      }),
+      signUp: vi.fn().mockResolvedValue({
+        data: { session: { user: { id: "test-user" } } },
+        error: null,
+      }),
+    },
   }),
 }));
 
@@ -27,6 +51,13 @@ describe("Login Page (Requirement 2)", () => {
   it("submits the form and navigates to the dashboard", async () => {
     render(<LoginPage />);
 
+    fireEvent.change(screen.getByLabelText(/Zakelijk e-mailadres/i), {
+      target: { value: "emma@haarstudiopuur.nl" },
+    });
+    fireEvent.change(screen.getByPlaceholderText(/••••••••••••/i), {
+      target: { value: "secret123" },
+    });
+
     const submitBtn = screen.getByRole("button", { name: /Naar Salon Dashboard/i });
     fireEvent.click(submitBtn);
 
@@ -44,6 +75,10 @@ describe("Login Page (Requirement 2)", () => {
     expect(
       screen.getByRole("button", { name: /Stuur mij een magische inloglink/i })
     ).toBeInTheDocument();
+
+    fireEvent.change(screen.getByLabelText(/Zakelijk e-mailadres/i), {
+      target: { value: "emma@haarstudiopuur.nl" },
+    });
 
     fireEvent.click(
       screen.getByRole("button", { name: /Stuur mij een magische inloglink/i })

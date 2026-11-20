@@ -80,18 +80,37 @@ In de MVP koppelt de gebruiker eenmalig zijn e-mail (Gmail of Outlook). Een acht
 - `app/(app)/layout.tsx`: Gedeelde Zen Dashboard shell met mobiele Bottom Tab Bar.
 - `app/(app)/dashboard/page.tsx`: Vernieuwd dashboard met compact 2x2 KPI grid.
 - `app/(app)/facturen/page.tsx`: Ultra-cleane factuurkaarten met Bottom Sheet review flow.
-- `app/(app)/koppelingen/page.tsx`: Mailbox status management met Switch component.
-- `app/(app)/instellingen/page.tsx`: Bedrijfsgegevens en Zen Regels met Switch toggles en lichte bundel.
-- `__tests__/dashboard.test.tsx`: Aangepast op nieuwe route group import.
-- `__tests__/settings.test.tsx`: Getest op Koppelingen en Instellingen formulieren.
-- `__tests__/facturen.test.tsx`: Getest op ultra-cleane kaarten en Bottom Sheet flow.
-- `__tests__/mollie.test.ts`: Getest op Checkout en Webhook endpoints.
-- `package.json`: `@supabase/supabase-js`, `@supabase/ssr` en `@mollie/api-client` toegevoegd.
+- `app/(app)/koppelingen/page.tsx`: Mailbox status management, Gmail & Outlook OAuth acties en ontkoppel flow.
+- `lib/crypto.ts`: AES-256-GCM token encryptie en decryptie helpers met 32-byte sleutel validatie.
+- `lib/oauth.ts`: OAuth base URL resolutie, redirect URI helpers en provider configuratie.
+- `app/api/oauth/gmail/connect/route.ts`: Gmail OAuth autorisatie redirect met CSRF state cookie.
+- `app/api/oauth/gmail/callback/route.ts`: Gmail OAuth code exchange, email extractie, versleuteling en upsert.
+- `app/api/oauth/outlook/connect/route.ts`: Microsoft 365 OAuth autorisatie redirect.
+- `app/api/oauth/outlook/callback/route.ts`: Microsoft 365 token exchange, Graph profile email en upsert.
+- `app/api/oauth/disconnect/route.ts`: Veilige server-side mailbox ontkoppel API route.
+- `__tests__/crypto.test.ts`: Vitest suite voor encryptie, decryptie, tampering en env validatie.
+- `__tests__/oauth.test.ts`: Vitest suite voor OAuth routes, redirects, token exchange en CSRF beveiliging.
 
 ---
 
-## 5. Logische volgende stap voor een volgende iteratie:
-1. **OAuth Mailbox Connectie (Gmail & Outlook):**
-   - OAuth flows toevoegen voor het daadwerkelijk autoriseren en opslaan van `provider_auth_token` en `provider_refresh_token` in `emailconnection`.
-2. **Achtergrond Worker / Cron:**
-   - Worker die periodiek inkomende e-mails ophaalt via IMAP/Gmail API, de classificatie-pipeline aanroept en PDF's forward naar `profiles.bookkeeping_upload_email`.
+## 5. Status van Stap 2: Google & Microsoft OAuth Koppeling + Token Encryptie (Voltooid)
+- [x] **AES-256-GCM Encryptie (`lib/crypto.ts`)**
+  - Veilige versleuteling (`encryptToken`, `decryptToken`) met random 12-byte IV en 16-byte GCM authentication tag.
+  - Strikte validatie van `ENCRYPTION_KEY` / `APP_ENCRYPTION_KEY` (32 bytes / 64 hex karakters).
+- [x] **Gmail OAuth Routes (`/api/oauth/gmail/connect` & `/api/oauth/gmail/callback`)**
+  - Scopes: `gmail.readonly` en `userinfo.email` met `access_type=offline` en `prompt=consent`.
+  - CSRF state beveiliging via SameSite=Lax cookie.
+  - Token encryptie en upsert in `emailconnection`.
+- [x] **Outlook OAuth Routes (`/api/oauth/outlook/connect` & `/api/oauth/outlook/callback`)**
+  - Scopes: `offline_access User.Read Mail.Read`.
+  - Microsoft Graph `/v1.0/me` email extractie, token encryptie en upsert in `emailconnection`.
+- [x] **Koppelingen Pagina (`/koppelingen`)**
+  - Knoppen "Gmail koppelen" en "Outlook koppelen" in header en empty state.
+  - Wabi-Sabi succes- en foutmeldingen op basis van URL query parameters (`?connected=...`, `?error=...`).
+  - Bevestigingsmodal voor "Ontkoppelen" en verwijdering via `/api/oauth/disconnect`.
+
+---
+
+## 6. Logische volgende stap voor een volgende iteratie:
+1. **Achtergrond Worker / Cron:**
+   - Worker die periodiek actieve mailboxen uit `emailconnection` ophaalt, tokens ontsleutelt via `decryptToken`, e-mails ophaalt via Gmail API of Microsoft Graph, de classificatie-pipeline aanroept en factuur-PDF's doorstuurt naar `bookkeeping_upload_email`.

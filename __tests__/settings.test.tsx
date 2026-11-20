@@ -32,6 +32,39 @@ describe("Koppelingen & Instellingen Pages", () => {
     });
   });
 
+  it("renders Gmail and Outlook connect buttons in Koppelingen", () => {
+    render(<KoppelingenPage />);
+
+    const gmailLinks = screen.getAllByRole("link", { name: /Gmail koppelen/i });
+    expect(gmailLinks.length).toBeGreaterThan(0);
+    expect(gmailLinks[0]).toHaveAttribute("href", "/api/oauth/gmail/connect");
+
+    const outlookLinks = screen.getAllByRole("link", { name: /Outlook koppelen/i });
+    expect(outlookLinks.length).toBeGreaterThan(0);
+    expect(outlookLinks[0]).toHaveAttribute("href", "/api/oauth/outlook/connect");
+  });
+
+  it("opens confirmation modal and disconnects a mailbox in Koppelingen", async () => {
+    render(<KoppelingenPage />);
+
+    const disconnectBtns = screen.getAllByRole("button", { name: /Ontkoppelen/i });
+    expect(disconnectBtns.length).toBeGreaterThan(0);
+
+    // Click disconnect on first mailbox
+    fireEvent.click(disconnectBtns[0]);
+
+    // Modal should appear
+    expect(screen.getByRole("dialog")).toBeInTheDocument();
+    expect(screen.getByText(/Weet je zeker dat je deze mailbox wilt loskoppelen van KamiFlow\?/i)).toBeInTheDocument();
+
+    const confirmBtn = screen.getByRole("button", { name: /Ja, mailbox ontkoppelen/i });
+    fireEvent.click(confirmBtn);
+
+    await waitFor(() => {
+      expect(screen.getByText(/is ontkoppeld/i)).toBeInTheDocument();
+    });
+  });
+
   it("renders company profile form and saves in Instellingen", async () => {
     render(<InstellingenPage />);
 
